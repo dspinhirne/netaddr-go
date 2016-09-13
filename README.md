@@ -4,6 +4,7 @@ A Go library for performing calculations on IPv4 and IPv6 subnets. There is also
 
 # Installation
 It should be noted that while the repository name is "netaddr-go" the package name is simply "netaddr".
+
 	go get github.com/dspinhirne/netaddr-go
 
 
