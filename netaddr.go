@@ -16,9 +16,9 @@ const (
 	ALL_ONES64 uint64 = 0xffffffffffffffff
 )
 
-// IPv4Prefix returns the prefix length needed to hold the
+// IPv4PrefixLen returns the prefix length needed to hold the
 // number of IP addresses specified by "size".
-func IPv4Prefix(size uint) uint {
+func IPv4PrefixLen(size uint) uint {
 	var prefix uint
 	for prefix = 32; prefix >= 0; prefix -= 1 {
 		hostbits := 32 - prefix
