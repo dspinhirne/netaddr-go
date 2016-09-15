@@ -107,6 +107,11 @@ func (ip *IPv6) Cmp(other *IPv6) (int, error) {
 	return 0, nil
 }
 
+// HostId returns the interal uint64 for the host id portion of the address.
+func (ip *IPv6) HostId() uint64 {
+	return ip.hostId
+}
+
 // Long returns the IPv6 address as a string in long (uncompressed) format.
 func (ip *IPv6) Long() string {
 	return fmt.Sprintf(
@@ -120,6 +125,27 @@ func (ip *IPv6) Long() string {
 		ip.hostId>>16&0xffff,
 		ip.hostId&0xffff,
 	)
+}
+
+// NetId returns the interal uint64 for the network id portion of the address.
+func (ip *IPv6) NetId() uint64 {
+	return ip.netId
+}
+
+// Next returns the next consecutive IPv6 or nil if the end of this /64 address space is reached.
+func (ip *IPv6) Next() *IPv6 {
+	if ip.hostId == ALL_ONES64{
+		return nil
+	}
+	return NewIPv6(ip.netId, ip.hostId + 1)
+}
+
+// Prev returns the preceding IPv6 or nil if this is first address of this /64 space.
+func (ip *IPv6) Prev() *IPv6 {
+	if ip.hostId == 0{
+		return nil
+	}
+	return NewIPv6(ip.netId, ip.hostId - 1)
 }
 
 // String returns IPv6 as a string in zero-compressed format (per rfc5952).
@@ -168,12 +194,3 @@ func (ip *IPv6) String() string {
 	return strings.Join(hexStr, ":")
 }
 
-// UintHost returns the host id portion of the address as a uint64.
-func (ip *IPv6) UintHost() uint64 {
-	return ip.hostId
-}
-
-// UintNet returns the network id portion of the address as a uint64.
-func (ip *IPv6) UintNet() uint64 {
-	return ip.netId
-}

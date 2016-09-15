@@ -30,6 +30,11 @@ type IPv4 struct {
 	addr uint32
 }
 
+// Addr returns the internal uint32 address.
+func (ip *IPv4) Addr() uint32 {
+	return ip.addr
+}
+
 /*
 Cmp compares equality with another IPv4. Return:
 	* 1 if this IPv4 is numerically greater
@@ -62,6 +67,22 @@ func (ip *IPv4) MulticastMac() EUI48 {
 	return mac
 }
 
+// Next returns the next consecutive IPv4 or nil if the end of the address space is reached.
+func (ip *IPv4) Next() *IPv4 {
+	if ip.addr == ALL_ONES32{
+		return nil
+	}
+	return NewIPv4(ip.addr + 1)
+}
+
+// Prev returns the preceding IPv4 or nil if this is 0.0.0.0.
+func (ip *IPv4) Prev() *IPv4 {
+	if ip.addr == 0{
+		return nil
+	}
+	return NewIPv4(ip.addr - 1)
+}
+
 // String return IPv4 address as a string.
 func (ip *IPv4) String() string {
 	return fmt.Sprintf("%d.%d.%d.%d",
@@ -69,9 +90,4 @@ func (ip *IPv4) String() string {
 		ip.addr>>16&0xff,
 		ip.addr>>8&0xff,
 		ip.addr&0xff)
-}
-
-// Uint returns the IP as a uint32.
-func (ip *IPv4) Uint() uint32 {
-	return ip.addr
 }

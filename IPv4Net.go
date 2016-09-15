@@ -22,9 +22,9 @@ func ParseIPv4Net(addr string) (*IPv4Net, error) {
 			return nil, fmt.Errorf("IP address contains multiple '/' characters.")
 		}
 		addr = addrSplit[0]
-		prefix := addrSplit[1]
+		prefixLen := addrSplit[1]
 		var err error
-		m32, err = ParseMask32(prefix)
+		m32, err = ParseMask32(prefixLen)
 		if err != nil {
 			return nil, err
 		}
@@ -99,15 +99,15 @@ func (net *IPv4Net) Extended() string {
 func (net *IPv4Net) Fill(list IPv4NetList) IPv4NetList {
 	var subs IPv4NetList
 	// get rid of non subnets
-	if len(list) > 0 {
+	if list != nil && len(list) > 0 {
 		for _, e := range list {
 			isRel, rel := net.Rel(e)
 			if isRel && rel == 1 { // e is a subnet
 				subs = append(subs, e)
 			}
 		}
-		// summarize & sort
-		subs = subs.Summ()
+		// discard subnets of subnets & sort
+		subs = subs.discardSubnets().Sort()
 	} else {
 		return subs
 	}
@@ -145,39 +145,6 @@ func (net *IPv4Net) Fill(list IPv4NetList) IPv4NetList {
 	return filled
 }
 
-/*
-IPs returns IP addresses belonging to this IPv4Net.
-The arguments are as follows:
-	* page -- the set to return. starts with page 0.
-	* perPage -- the max number of addresses to return. defaults to 32.
-*/
-func (net *IPv4Net) IPs(page, perPage uint32) (IPv4List, error) {
-	ipCount := net.m32.Len()
-	nth := page * perPage
-	if nth > ipCount-1 {
-		return nil, fmt.Errorf("Maximum of %d addresses available. Page %d, PerPage %d exceeds limit.", ipCount, page, perPage)
-	}
-
-	// set default or limit to ipCount
-	if perPage == 0 {
-		if ipCount > 32 {
-			perPage = 32
-		} else {
-			perPage = ipCount
-		}
-	} else if perPage > ipCount {
-		perPage = ipCount
-	}
-
-	list := make(IPv4List, perPage, perPage)
-	var i uint32
-	for ; i < perPage; i += 1 {
-		list[i] = NewIPv4(net.base.addr + nth)
-		nth += 1
-	}
-	return list, nil
-}
-
 // Len returns the number of IP addresses in this network.
 // It will always return 0 for /0 networks.
 func (net *IPv4Net) Len() uint32 {
@@ -207,11 +174,7 @@ func (net *IPv4Net) Next() *IPv4Net {
 // NextSib returns the network immediately following this one.
 // It will return nil if the end of the address space is reached.
 func (net *IPv4Net) NextSib() *IPv4Net {
-	addr := net.nthSib(1, false)
-	if addr == nil { // end of address space reached
-		return nil
-	}
-	return addr
+	return net.nthSib(1, false)
 }
 
 // Nth returns the IP address at the given index.
@@ -224,12 +187,21 @@ func (net *IPv4Net) Nth(index uint32) *IPv4 {
 	return NewIPv4(net.base.addr + index)
 }
 
+// NthSubnet returns the subnet IPv4Net at the given index.
+// The number of subnets may be determined with the SubnetCount() method.
+// If the range is exceeded  or an invalid prefixLen is provided then return nil.
+func (net *IPv4Net) NthSubnet(prefixLen uint, index uint32) *IPv4Net {
+	count := net.SubnetCount(prefixLen)
+	if count == 0 || index >= count{
+		return nil
+	}
+	sub0 := net.Resize(prefixLen)
+	return sub0.nthSib(index,false)
+}
+
 // Prev returns the previous largest consecutive IP network
 // or nil if the start of the address space is reached.
 func (net *IPv4Net) Prev() *IPv4Net {
-	if net.base.addr == 0 { // start of address space reached
-		return nil
-	}
 	resized := net.grow()
 	return resized.nthSib(1, true)
 }
@@ -237,9 +209,6 @@ func (net *IPv4Net) Prev() *IPv4Net {
 // PrevSib returns the network immediately preceding this one.
 // It will return nil if this is 0.0.0.0.
 func (net *IPv4Net) PrevSib() *IPv4Net {
-	if net.base.addr == 0 { // start of address space reached
-		return nil
-	}
 	return net.nthSib(1, true)
 }
 
@@ -274,13 +243,14 @@ func (net *IPv4Net) Rel(other *IPv4Net) (bool, int) {
 	return false, 0
 }
 
-// Resize returns a copy of the network with an adjusted netmask.
-func (net *IPv4Net) Resize(prefix uint) (*IPv4Net, error) {
-	m32, err := NewMask32(prefix)
-	if err != nil {
-		return nil, err
+// Resize returns a copy of the network with an adjusted netmask or nil if an invalid prefixLen is given.
+func (net *IPv4Net) Resize(prefixLen uint) *IPv4Net{
+	if prefixLen > 32{
+		return nil
 	}
-	return NewIPv4Net(net.base, m32)
+	m32,_ := NewMask32(prefixLen)
+	net,_ = NewIPv4Net(net.base, m32)
+	return net
 }
 
 // String returns the network address as a string in CIDR format.
@@ -288,81 +258,32 @@ func (net *IPv4Net) String() string {
 	return net.base.String() + net.m32.String()
 }
 
-/*
-Subnet creates and returns subnets of this IPv4Net.
-The arguments are as follows:
-	* prefix -- the prefix length of the new subnets. must be longer than prefix of this IPv4Net.
-	* page -- the set to return. starts with page 0.
-	* perPage -- the max number of subnets to return. defaults to 32.
-*/
-func (net *IPv4Net) Subnet(prefix uint, page, perPage uint32) (IPv4NetList, error) {
-	if prefix <= net.m32.prefix {
-		return nil, fmt.Errorf("Prefix length must be greater than /%d.", net.m32.prefix)
-	}
-	m32, err := NewMask32(prefix)
-	if err != nil {
-		return nil, err
-	}
-	var maxSubs uint32 = 1 << (prefix - net.m32.prefix) // maxium number of subnets
-	nth := page * perPage
-	if nth > maxSubs-1 {
-		return nil, fmt.Errorf("Maximum of %d subnets available. Page %d, PerPage %d exceeds limit.", maxSubs, page, perPage)
-	}
-
-	// set default or limit to maxSubs
-	if perPage == 0 {
-		if maxSubs > 32 {
-			perPage = 32
-		} else {
-			perPage = maxSubs
-		}
-	} else if perPage > maxSubs {
-		perPage = maxSubs
-	}
-
-	subBase, _ := NewIPv4Net(net.base, m32)
-	list := make(IPv4NetList, perPage, perPage)
-	if nth != 0 {
-		subBase = subBase.nthSib(nth, false)
-	}
-	list[0] = subBase
-	nth = 1
-	for ; nth < perPage; nth += 1 {
-		sub := subBase.nthSib(nth, false)
-		list[nth] = sub
-	}
-	return list, nil
-}
 
 // SubnetCount returns the number a subnets of a given prefix length that this IPv4Net contains.
 // It will return 0 for invalid requests (ie. bad prefix or prefix is shorter than that of this network).
 // It will also return 0 if the result exceeds the capacity of uint32 (ie. if you want the # of /32 a /0 will hold)
-func (net *IPv4Net) SubnetCount(prefix uint) uint32 {
-	if prefix <= net.m32.prefix || prefix > 32 {
+func (net *IPv4Net) SubnetCount(prefixLen uint) uint32 {
+	if prefixLen <= net.m32.prefixLen || prefixLen > 32 {
 		return 0
 	}
-	return 1 << (prefix - net.m32.prefix)
+	return 1 << (prefixLen - net.m32.prefixLen)
 }
 
-// Summ creates a summary address from this IPv4Net and another.
-// It errors if the two networks are incapable of being summarized.
-func (net *IPv4Net) Summ(other *IPv4Net) (*IPv4Net, error) {
-	if other == nil {
-		return nil, fmt.Errorf("Argument other must not be nil.")
-	}
-	if net.m32.prefix != other.m32.prefix {
-		return nil, fmt.Errorf("%s and %s have mismatched prefix lengths.", net, other)
+// Summ creates a summary address from this IPv4Net and another or nil if the two networks are incapable of being summarized.
+func (net *IPv4Net) Summ(other *IPv4Net) *IPv4Net {
+	if other == nil || net.m32.prefixLen != other.m32.prefixLen {
+		return nil
 	}
 
 	// merge-able networks will be identical if you right shift them
 	// by the number of bits in the hostmask + 1.
-	shift := 32 - net.m32.prefix + 1
+	shift := 32 - net.m32.prefixLen + 1
 	addr := net.base.addr >> shift
 	otherAddr := other.base.addr >> shift
 	if addr != otherAddr {
-		return nil, fmt.Errorf("%s and %s do not fall within a common bit boundary.", net, other)
+		return nil
 	}
-	return net.Resize(net.m32.prefix - 1)
+	return net.Resize(net.m32.prefixLen - 1)
 }
 
 // NON EXPORTED
@@ -404,27 +325,24 @@ func initIPv4Net(ip *IPv4, m32 *Mask32) *IPv4Net {
 	net := new(IPv4Net)
 	if m32 == nil {
 		m32 = initMask32(32)
-		net.m32 = m32
-	} else {
-		m32 = m32.dup()
 	}
 	net.m32 = m32
 	net.base = NewIPv4(ip.addr & m32.mask) // set base ip
 	return net
 }
 
-// grow decreases the netmask as much as possible without crossing a bit boundary.
+// grow decreases the prefix length as much as possible without crossing a bit boundary.
 func (net *IPv4Net) grow() *IPv4Net {
 	addr := net.base.addr
 	mask := net.m32.mask
-	var prefix uint
-	for prefix = net.m32.prefix; prefix >= 0; prefix -= 1 {
+	var prefixLen uint
+	for prefixLen = net.m32.prefixLen; prefixLen >= 0; prefixLen -= 1 {
 		mask = mask << 1
-		if addr|mask != mask || prefix == 0 { // bit boundary crossed when there are '1' bits in the host portion
+		if addr|mask != mask || prefixLen == 0 { // bit boundary crossed when there are '1' bits in the host portion
 			break
 		}
 	}
-	return initIPv4Net(NewIPv4(addr), initMask32(prefix))
+	return initIPv4Net(NewIPv4(addr), initMask32(prefixLen))
 }
 
 // nthSib returns the nth next sibling network or nil if address space exceeded.
@@ -433,12 +351,12 @@ func (net *IPv4Net) nthSib(nth uint32, prev bool) *IPv4Net {
 	var addr uint32
 	// right shift by # of bits of host portion of address, add nth.
 	// and left shift back. this is the sibling network.
-	shift := 32 - net.m32.prefix
+	shift := 32 - net.m32.prefixLen
 	if prev {
-		addr = (net.base.addr>>shift - nth) << shift
-		if addr > net.base.addr {
+		if net.base.addr == 0{
 			return nil
 		}
+		addr = (net.base.addr>>shift - nth) << shift
 	} else {
 		addr = (net.base.addr>>shift + nth) << shift
 		if addr < net.base.addr {

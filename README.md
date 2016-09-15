@@ -9,9 +9,16 @@ It should be noted that while the repository name is "netaddr-go" the package na
 
 
 # Usage
+
+	package main
+
+	import "fmt"
 	import "github.com/dspinhirne/netaddr-go"
 
-	net,_ := netaddr.NewIPv4Net("192.168.1.0/24")
+	func main() {
+		net,_ := netaddr.ParseIPv4Net("192.168.1.0/24")
+		fmt.Println(net)
+	}
 
 
 # Documentation

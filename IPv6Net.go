@@ -21,9 +21,9 @@ func ParseIPv6Net(addr string) (*IPv6Net, error) {
 			return nil, fmt.Errorf("IP address contains multiple '/' characters.")
 		}
 		addr = addrSplit[0]
-		prefix := addrSplit[1]
+		prefixLen := addrSplit[1]
 		var err error
-		m128, err = ParseMask128(prefix)
+		m128, err = ParseMask128(prefixLen)
 		if err != nil {
 			return nil, err
 		}
@@ -85,15 +85,15 @@ func (net *IPv6Net) Cmp(other *IPv6Net) (int, error) {
 func (net *IPv6Net) Fill(list IPv6NetList) IPv6NetList {
 	var subs IPv6NetList
 	// get rid of non subnets
-	if len(list) > 0 {
+	if list != nil && len(list) > 0 {
 		for _, e := range list {
 			isRel, rel := net.Rel(e)
 			if isRel && rel == 1 { // e is a subnet
 				subs = append(subs, e)
 			}
 		}
-		// summarize & sort
-		subs = subs.Summ()
+		// discard subnets of subnets & sort
+		subs = subs.discardSubnets().Sort()
 	} else {
 		return subs
 	}
@@ -166,11 +166,7 @@ func (net *IPv6Net) Next() *IPv6Net {
 // NextSib returns the network immediately following this one.
 // It will return nil if the end of the address space is reached.
 func (net *IPv6Net) NextSib() *IPv6Net {
-	addr := net.nthSib(1, false)
-	if addr == nil { // passed end of addr space
-		return nil
-	}
-	return addr
+	return net.nthSib(1, false)
 }
 
 // Nth returns the IP address at the given index.
@@ -179,18 +175,27 @@ func (net *IPv6Net) NextSib() *IPv6Net {
 // For /64 networks the max index is ALL_ONES64.
 // If the prefix length is > 64 then use the Len() method to deterimine the size of the range.
 func (net *IPv6Net) Nth(index uint64) *IPv6 {
-	if net.m128.prefix < 64 || (net.m128.prefix > 64 && index >= net.Len()) {
+	if net.m128.prefixLen < 64 || (net.m128.prefixLen > 64 && index >= net.Len()) {
 		return nil
 	}
 	return NewIPv6(net.base.netId, net.base.hostId+index)
 }
 
+// NthSubnet returns the subnet IPv6Net at the given index.
+// The number of subnets may be determined with the SubnetCount() method.
+// If the range is exceeded  or an invalid prefixLen is provided then return nil.
+func (net *IPv6Net) NthSubnet(prefixLen uint, index uint64) *IPv6Net {
+	count := net.SubnetCount(prefixLen)
+	if count == 0 || index >= count{
+		return nil
+	}
+	sub0 := net.Resize(prefixLen)
+	return sub0.nthSib(index,false)
+}
+
 // Prev returns the previous largest consecutive IP network
 // or nil if the start of the address space is reached.
 func (net *IPv6Net) Prev() *IPv6Net {
-	if net.base.netId == 0 && net.base.hostId == 0 { // start of address space reached
-		return nil
-	}
 	resized := net.grow()
 	return resized.nthSib(1, true)
 }
@@ -198,9 +203,6 @@ func (net *IPv6Net) Prev() *IPv6Net {
 // PrevSib returns the network immediately preceding this one.
 // It will return nil if start of the address space is reached.
 func (net *IPv6Net) PrevSib() *IPv6Net {
-	if net.base.netId == 0 && net.base.hostId == 0 { // start of address space reached
-		return nil
-	}
 	return net.nthSib(1, true)
 }
 
@@ -239,12 +241,13 @@ func (net *IPv6Net) Rel(other *IPv6Net) (bool, int) {
 }
 
 // Resize returns a copy of the network with an adjusted netmask.
-func (net *IPv6Net) Resize(prefix uint) (*IPv6Net, error) {
-	m128, err := NewMask128(prefix)
-	if err != nil {
-		return nil, err
+func (net *IPv6Net) Resize(prefixLen uint) *IPv6Net{
+	if prefixLen > 128{
+		return nil
 	}
-	return NewIPv6Net(net.base, m128)
+	m128,_ := NewMask128(prefixLen)
+	net,_ = NewIPv6Net(net.base, m128)
+	return net
 }
 
 // String returns the network address as a string in zero-compressed format.
@@ -252,88 +255,35 @@ func (net *IPv6Net) String() string {
 	return net.base.String() + net.m128.String()
 }
 
-/*
-Subnet creates and returns subnets of this IPv6Net.
-The arguments are as follows:
-	* prefix -- the prefix length of the new subnets. must be longer than prefix of this IPv6Net.
-	* page -- the set to return. starts with page 0.
-	* perPage -- the max number of subnets to return. defaults to 32.
-
-Note that if you request more subnets than will fit in a uint64 then an error will result.
-*/
-func (net *IPv6Net) Subnet(prefix uint, page, perPage uint64) (IPv6NetList, error) {
-	if prefix <= net.m128.prefix {
-		return nil, fmt.Errorf("Requested subnet prefix length %d is less than current IPv6Net prefix length of %d.", prefix, net.m128.prefix)
-	}
-	m128, err := NewMask128(prefix)
-	if err != nil {
-		return nil, err
-	}
-	maxSubs := net.SubnetCount(prefix) // maxium number of subnets
-	nth := page * perPage
-	if nth > maxSubs-1 || maxSubs == 0 {
-		return nil, fmt.Errorf("Maximum of %d subnets available. Page %d, PerPage %d exceeds limit.", maxSubs, page, perPage)
-	}
-
-	// set default or limit to maxSubs
-	if perPage == 0 {
-		if maxSubs > 32 {
-			perPage = 32
-		} else {
-			perPage = maxSubs
-		}
-	} else if perPage > maxSubs {
-		perPage = maxSubs
-	}
-
-	subBase, _ := NewIPv6Net(net.base, m128)
-	list := make(IPv6NetList, perPage, perPage)
-	if nth != 0 {
-		subBase = subBase.nthSib(nth, false)
-	}
-	list[0] = subBase
-	nth = 1
-	for ; nth < perPage; nth += 1 {
-		sub := subBase.nthSib(nth, false)
-		list[nth] = sub
-	}
-	return list, nil
-}
-
 // SubnetCount returns the number a subnets of a given prefix length that this IPv6Net contains.
 // It will return 0 for invalid requests (ie. bad prefix or prefix is shorter than that of this network).
 // It will also return 0 if the result exceeds the capacity of uint64 (ie. if you want the # of /128 a /8 will hold)
-func (net *IPv6Net) SubnetCount(prefix uint) uint64 {
-	if prefix <= net.m128.prefix || prefix > 128 {
+func (net *IPv6Net) SubnetCount(prefixLen uint) uint64 {
+	if prefixLen <= net.m128.prefixLen || prefixLen > 128 {
 		return 0
 	}
-	if prefix <= 64 {
-		return 1 << (prefix - net.m128.prefix)
-	} else if prefix-net.m128.prefix >= 64 { // cant exceed 64 bit response
+	if prefixLen <= 64 {
+		return 1 << (prefixLen - net.m128.prefixLen)
+	} else if prefixLen-net.m128.prefixLen >= 64 { // cant exceed 64 bit response
 		return 0
 	}
-	return 1 << (prefix - net.m128.prefix)
+	return 1 << (prefixLen - net.m128.prefixLen)
 }
 
-// Summ creates a summary address from this IPv6Net and another.
-// It errors if the two networks are incapable of being summarized.
-// Use CanSumm to test if a summary may be created from a pair of networks.
-func (net *IPv6Net) Summ(other *IPv6Net) (*IPv6Net, error) {
-	if other == nil {
-		return nil, fmt.Errorf("Argument other must not be nil.")
-	}
-	if net.m128.prefix != other.m128.prefix {
-		return nil, fmt.Errorf("%s and %s have mismatched prefix lengths.", net, other)
+// Summ creates a summary address from this IPv6Net and another or nil if the two networks are incapable of being summarized.
+func (net *IPv6Net) Summ(other *IPv6Net) *IPv6Net {
+	if other == nil || net.m128.prefixLen != other.m128.prefixLen {
+		return nil
 	}
 
 	// get relevant portion of address
 	var addr, otherAddr uint64
-	if net.m128.prefix <= 64 {
-		shift := 64 - net.m128.prefix + 1
+	if net.m128.prefixLen <= 64 {
+		shift := 64 - net.m128.prefixLen + 1
 		addr = net.base.netId >> shift
 		otherAddr = other.base.netId >> shift
 	} else {
-		shift := 128 - net.m128.prefix + 1
+		shift := 128 - net.m128.prefixLen + 1
 		addr = net.base.hostId >> shift
 		otherAddr = other.base.hostId >> shift
 	}
@@ -341,9 +291,9 @@ func (net *IPv6Net) Summ(other *IPv6Net) (*IPv6Net, error) {
 	// merge-able networks will be identical if you right shift them
 	// by the number of bits in the hostmask + 1.
 	if addr != otherAddr {
-		return nil, fmt.Errorf("%s and %s do not fall within a common bit boundary.", net, other)
+		return nil
 	}
-	return net.Resize(net.m128.prefix - 1)
+	return net.Resize(net.m128.prefixLen - 1)
 }
 
 // NON EXPORTED
@@ -392,15 +342,13 @@ func (net *IPv6Net) fwdFill(limit *IPv6) IPv6NetList {
 func initIPv6Net(ip *IPv6, m128 *Mask128) *IPv6Net {
 	net := new(IPv6Net)
 	if m128 == nil {
-		var prefix uint = 64                  // use /64 mask per rfc 4291
+		var prefixLen uint = 64                  // use /64 mask per rfc 4291
 		if ip.netId&0x1fffffffffffffff == 0 { // use /128 mask per rfc 4291
-			prefix = 128
+			prefixLen = 128
 		}
-		m128 = initMask128(prefix)
-	} else {
-		m128 = m128.dup()
+		m128 = initMask128(prefixLen)
 	}
-
+	
 	// set base ip for this network
 	net.base = new(IPv6)
 	net.base.netId = ip.netId & m128.netIdMask
@@ -411,31 +359,31 @@ func initIPv6Net(ip *IPv6, m128 *Mask128) *IPv6Net {
 
 // grow decreases the netmask as much as possible without crossing a bit boundary
 func (net *IPv6Net) grow() *IPv6Net {
-	longPrefix := net.m128.prefix > 64 // is the prefix longer than /64
-	var prefix uint
+	longPrefix := net.m128.prefixLen > 64 // is the prefix longer than /64
+	var prefixLen uint
 	var addr, mask uint64
 	if longPrefix {
 		mask = net.m128.hostIdMask
 		addr = net.base.hostId
-		prefix = net.m128.prefix - 64
+		prefixLen = net.m128.prefixLen - 64
 	} else {
 		mask = net.m128.netIdMask
 		addr = net.base.netId
-		prefix = net.m128.prefix
+		prefixLen = net.m128.prefixLen
 	}
 
-	for ; prefix >= 0; prefix -= 1 {
+	for ; prefixLen >= 0; prefixLen -= 1 {
 		mask = mask << 1
-		if addr|mask != mask || prefix == 0 { // bit boundary crossed when there are '1' bits in the host portion
+		if addr|mask != mask || prefixLen == 0 { // bit boundary crossed when there are '1' bits in the host portion
 			break
 		}
 	}
 
 	if longPrefix { // add back the 64 bits we subtracted above
-		prefix += 64
+		prefixLen += 64
 	}
-	resized := initIPv6Net(NewIPv6(net.base.netId, net.base.hostId), initMask128(prefix))
-	if prefix == 64 && longPrefix { // we were a longPrefix network and we crossed the /64 boundary. need to keep going
+	resized := initIPv6Net(NewIPv6(net.base.netId, net.base.hostId), initMask128(prefixLen))
+	if prefixLen == 64 && longPrefix { // we were a longPrefix network and we crossed the /64 boundary. need to keep going
 		resized = resized.grow()
 	}
 	return resized
@@ -449,7 +397,7 @@ func (net *IPv6Net) nthSib(nth uint64, prev bool) *IPv6Net {
 		return nil
 	}
 	var sib *IPv6Net
-	if net.m128.prefix <= 64 {
+	if net.m128.prefixLen <= 64 {
 		sib = net.nthNetIdSib(nth, prev)
 	} else {
 		sib = net.nthHostIdSib(nth, prev)
@@ -464,7 +412,7 @@ func (net *IPv6Net) nthSib(nth uint64, prev bool) *IPv6Net {
 // nthHostIdSib returns the nth next sibling network using the hostID portion of the address.
 // nthHostIdSib will return the nth previous sibling if prev is true
 func (net *IPv6Net) nthHostIdSib(nth uint64, prev bool) *IPv6Net {
-	shift := 128 - net.m128.prefix
+	shift := 128 - net.m128.prefixLen
 	hostId := net.base.hostId
 	if prev {
 		hostId = (hostId>>shift - nth) << shift
@@ -477,7 +425,7 @@ func (net *IPv6Net) nthHostIdSib(nth uint64, prev bool) *IPv6Net {
 // nthNetIdSib returns the nth next sibling network using the netID portion of the address.
 // nthNetIdSib will return the nth previous sibling if prev is true
 func (net *IPv6Net) nthNetIdSib(nth uint64, prev bool) *IPv6Net {
-	shift := 64 - net.m128.prefix
+	shift := 64 - net.m128.prefixLen
 	netId := net.base.netId
 	if prev {
 		netId = (netId>>shift - nth) << shift

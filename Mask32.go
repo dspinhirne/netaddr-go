@@ -37,7 +37,7 @@ func ParseMask32(netmask string) (*Mask32, error) {
 		separated the net vs host mask we xor them together. the result should be that
 		all bits are now '1'. if not then we know we have an invalid netmask.
 	*/
-	var prefix uint = 32
+	var prefixLen uint = 32
 	var hostmask uint32 = 1
 	mask := u32
 	for i := 32; i > 0; i -= 1 {
@@ -50,25 +50,25 @@ func ParseMask32(netmask string) (*Mask32, error) {
 		}
 		hostmask = (hostmask << 1) | 1
 		u32 = u32 >> 1
-		prefix -= 1
+		prefixLen -= 1
 	}
 
-	return initMask32(prefix), nil
+	return initMask32(prefixLen), nil
 }
 
 // NewMask32 converts an integer, representing the prefix length for an IPv4 address,
 // to a Mask32 type. Integer must be from 0 to 32.
-func NewMask32(prefix uint) (*Mask32, error) {
-	if prefix > 32 {
-		return nil, fmt.Errorf("Netmask length %d is too long for IPv4.", prefix)
+func NewMask32(prefixLen uint) (*Mask32, error) {
+	if prefixLen > 32 {
+		return nil, fmt.Errorf("Netmask length %d is too long for IPv4.", prefixLen)
 	}
-	return initMask32(prefix), nil
+	return initMask32(prefixLen), nil
 }
 
 // Mask32 represents a 32-bit netmask used by IPv4Net.
 type Mask32 struct {
 	mask   uint32
-	prefix uint // prefix length
+	prefixLen uint // prefix length
 }
 
 /*
@@ -78,10 +78,10 @@ Cmp compares equality with another Mask32. Return:
 	* -1 if this Mask32 is smaller in capacity
 */
 func (m32 *Mask32) Cmp(other *Mask32) int {
-	if m32.prefix < other.prefix {
+	if m32.prefixLen < other.prefixLen {
 		return 1
 	}
-	if m32.prefix > other.prefix {
+	if m32.prefixLen > other.prefixLen {
 		return -1
 	}
 	return 0
@@ -105,32 +105,29 @@ func (m32 *Mask32) Len() uint32 {
 	return m32.mask ^ ALL_ONES32 + 1 // bit flip the netmask and add 1
 }
 
+// Mask returns the internal uint32 mask.
+func (m32 *Mask32) Mask() uint32 {
+	return m32.mask
+}
+
 // PrefixLen returns the prefix length as an Uint.
 func (m32 *Mask32) PrefixLen() uint {
-	return m32.prefix
+	return m32.prefixLen
 }
 
 // String returns the prefix length as a string.
 // Use Extended() to return in extended format instead.
 func (m32 *Mask32) String() string {
-	return fmt.Sprintf("/%d", m32.prefix)
+	return fmt.Sprintf("/%d", m32.prefixLen)
 }
 
-// Uint returns the netmask as a uint32.
-func (m32 *Mask32) Uint() uint32 {
-	return m32.mask
-}
 
 // NON EXPORTED
 
-// dup creates copy of Mask32
-func (m32 *Mask32) dup() *Mask32 {
-	return &Mask32{m32.mask, m32.prefix}
-}
 
 // initMask32 creates and inits a Mask32
-func initMask32(prefix uint) *Mask32 {
-	m32 := &Mask32{prefix: prefix}
-	m32.mask = ALL_ONES32 ^ (ALL_ONES32 >> uint32(prefix))
+func initMask32(prefixLen uint) *Mask32 {
+	m32 := &Mask32{prefixLen: prefixLen}
+	m32.mask = ALL_ONES32 ^ (ALL_ONES32 >> uint32(prefixLen))
 	return m32
 }

@@ -85,16 +85,13 @@ func (list IPv6NetList) discardSubnets() IPv6NetList {
 		cleaned = append(cleaned, unrelated.discardSubnets()...)
 	}
 
-	if len(cleaned) > 1 {
-		cleaned.Sort()
-	}
 	return cleaned
 }
 
 // summPeers returns a copy of the IPv6NetList with any
 // merge-able subnets Summ'd together.
 func (list IPv6NetList) summPeers() IPv6NetList {
-	summd := list
+	summd := list.Sort()
 	for {
 		listLen := len(summd)
 		last := listLen - 1
@@ -105,8 +102,8 @@ func (list IPv6NetList) summPeers() IPv6NetList {
 			if i != last {
 				// if we can summarize 2 consecutive entries then store the new
 				// summary net and discard the 2 original networks
-				newNet, err := net.Summ(summd[next])
-				if err == nil { // can summarize. keep summary net
+				newNet := net.Summ(summd[next])
+				if newNet != nil { // can summarize. keep summary net
 					tmpList = append(tmpList, newNet)
 					i += 1 // skip over the next entry
 				} else { // cant summarize. keep existing

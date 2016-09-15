@@ -53,7 +53,7 @@ func (eui EUI64) String() string {
 // ToIPv6 generates an IPv6 address from this EUI64 address and the provided IPv6Net.
 // Nil will be returned if IPv6Net is not a /64.
 func (eui EUI64) ToIPv6(net *IPv6Net) *IPv6 {
-	if net.m128.prefix != 64 {
+	if net.m128.prefixLen != 64 {
 		return nil
 	}
 

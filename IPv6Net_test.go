@@ -195,6 +195,30 @@ func Test_IPv6Net_Nth(t *testing.T) {
 	}
 }
 
+func Test_IPv6Net_NthSubnet(t *testing.T) {
+	cases := []struct {
+		given  string
+		prefix uint
+		nth    uint64
+		expect string
+	}{
+		{"1::/24", 30, 0, "1::/30"},
+		{"1::", 26, 4, ""},
+	}
+
+	for _, c := range cases {
+		net, _ := ParseIPv6Net(c.given)
+		nth := net.NthSubnet(c.prefix,c.nth)
+		if nth == nil {
+			if c.expect != "" {
+				t.Errorf("%s.NthSubnet(%d,%d) Expect: %s  Result: nil", c.given, c.prefix, c.nth, c.expect)
+			}
+		} else if nth.String() != c.expect {
+			t.Errorf("%s.NthSubnet(%d,%d) Expect: %s  Result: %s", c.given, c.prefix, c.nth, c.expect, nth)
+		}
+	}
+}
+
 func Test_IPv6Net_Prev(t *testing.T) {
 	cases := []struct {
 		net  string
@@ -292,56 +316,9 @@ func Test_IPv6Net_Resize(t *testing.T) {
 
 	for _, c := range cases {
 		net, _ := ParseIPv6Net(c.net)
-		net, _ = net.Resize(c.m)
+		net = net.Resize(c.m)
 		if net.String() != c.expect {
 			t.Errorf("%s.Resize(%d) Expect: %s  Result: %s", c.expect, net)
-		}
-	}
-}
-
-func Test_IPv6Net_Subnet(t *testing.T) {
-	cases := []struct {
-		net     string
-		prefix  uint
-		page    uint64
-		perPage uint64
-		count   int
-		expect  []string
-		err     bool
-	}{
-		{"ff00::/8", 10, 0, 0, 4, []string{"ff00::/10", "ff40::/10", "ff80::/10", "ffc0::/10"}, false},
-		{"ff00::/8", 10, 0, 5, 4, []string{"ff00::/10", "ff40::/10", "ff80::/10", "ffc0::/10"}, false},
-		{"ff00::/8", 10, 0, 2, 2, []string{"ff00::/10", "ff40::/10"}, false},
-		{"ff00::/64", 66, 0, 2, 2, []string{"ff00::/66", "ff00::4000:0:0:0/66"}, false},
-		{"ff00::/8", 16, 0, 0, 32, nil, false},  // default pageSize
-		{"ff00::/8", 16, 0, 64, 64, nil, false}, // large page
-		{"ff00::/8", 10, 1, 4, 0, nil, true},    // exceed page limit
-		{"ff00::/8", 8, 0, 0, 0, nil, true},     // prefix is unchanged
-		{"ff00::/8", 128, 0, 0, 0, nil, true},   // too many results
-		{"ff00::/8", 129, 0, 0, 0, nil, true},   // bad prefix
-	}
-
-	for _, c := range cases {
-		net, _ := ParseIPv6Net(c.net)
-		subs, err := net.Subnet(c.prefix, c.page, c.perPage)
-		if err != nil {
-			if !c.err {
-				t.Errorf("%s.Subnet(%d,%d,%d) unexpected error: %s", c.net, c.prefix, c.page, c.perPage, err.Error())
-			}
-		} else {
-			if c.count != len(subs) {
-				t.Errorf("%s.Subnet(%d,%d,%d) is wrong length Expect: %d  Result: %d", c.net, c.prefix, c.page, c.perPage, c.count, len(subs))
-				continue
-			}
-
-			if c.expect != nil {
-				for i, e := range subs {
-					if c.expect[i] != e.String() {
-						t.Errorf("%s.Subnet(%d,%d,%d) Expected: %v  Result: %v", c.net, c.prefix, c.page, c.perPage, c.expect, subs)
-						break
-					}
-				}
-			}
 		}
 	}
 }
@@ -389,13 +366,13 @@ func Test_IPv6Net_Summ(t *testing.T) {
 	for _, c := range cases {
 		net, _ := ParseIPv6Net(c.net)
 		other, _ := ParseIPv6Net(c.other)
-		summ, err := net.Summ(other)
+		summ := net.Summ(other)
 
-		if err != nil {
+		if summ == nil {
 			if !c.err {
-				t.Errorf("%s.Summ(%s) unexpected error: %s", c.net, c.other, err.Error())
+				t.Errorf("%s.Summ(%s) unexpected error: could not summarize networks", c.net, c.other)
 			}
-		} else if err == nil && c.err {
+		} else if summ != nil && c.err {
 			t.Errorf("%s.Summ(%s) expected error but none raised.", c.net, c.other)
 		} else {
 			if summ.String() != c.expect {

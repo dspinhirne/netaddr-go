@@ -5,7 +5,7 @@ import "testing"
 func Test_ParseMask128(t *testing.T) {
 	cases := []struct {
 		given      string
-		prefix     uint
+		prefixLen     uint
 		netIdMask  uint64
 		hostIdMask uint64
 		expectErr  bool
@@ -35,8 +35,8 @@ func Test_ParseMask128(t *testing.T) {
 		if m128.netIdMask != c.netIdMask || m128.hostIdMask != c.hostIdMask {
 			t.Errorf("ParseMask128(%s) mask. Expect: %016x%016x  Result: %016x%016x",
 				c.given, m128.netIdMask, m128.hostIdMask, c.netIdMask, c.hostIdMask)
-		} else if m128.prefix != c.prefix {
-			t.Errorf("ParseMask128(%s) prefix. Expect: %d  Result: %d", c.given, m128.prefix, c.prefix)
+		} else if m128.prefixLen != c.prefixLen {
+			t.Errorf("ParseMask128(%s) Expect: %d  Result: %d", c.given, m128.prefixLen, c.prefixLen)
 		}
 	}
 }
@@ -44,7 +44,7 @@ func Test_ParseMask128(t *testing.T) {
 func Test_NewMask128(t *testing.T) {
 	cases := []struct {
 		given      uint
-		prefix     uint
+		prefixLen     uint
 		netIdMask  uint64
 		hostIdMask uint64
 		expectErr  bool
@@ -73,8 +73,8 @@ func Test_NewMask128(t *testing.T) {
 		if m128.netIdMask != c.netIdMask || m128.hostIdMask != c.hostIdMask {
 			t.Errorf("Mask for '%s' did not yield expected result. %016x%016x != %016x%016x",
 				c.given, m128.netIdMask, m128.hostIdMask, c.netIdMask, c.hostIdMask)
-		} else if m128.prefix != c.prefix {
-			t.Errorf("Mask Length for /%d did not yield expected result. %d != %d", c.given, m128.prefix, c.prefix)
+		} else if m128.prefixLen != c.prefixLen {
+			t.Errorf("Mask Length for /%d did not yield expected result. %d != %d", c.given, m128.prefixLen, c.prefixLen)
 		}
 	}
 }

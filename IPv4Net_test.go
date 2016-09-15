@@ -25,17 +25,10 @@ func ExampleIPv4Net_Extended() {
 
 func ExampleIPv4Net_Fill() {
 	net, _ := ParseIPv4Net("10.0.0.0/24")
-	subs, _ := net.Subnet(26, 0, 1) // [10.0.0.0/26]
+	subs,_ := NewIPv4NetList([]string{"10.0.0.0/26"})
 	subs = net.Fill(subs)           // fills in the missing subnets
 	fmt.Println(subs)
 	// Output: [10.0.0.0/26 10.0.0.64/26 10.0.0.128/25]
-}
-
-func ExampleIPv4Net_IPs() {
-	net, _ := ParseIPv4Net("10.0.0.0/30")
-	ips, _ := net.IPs(1, 2) // return the last 2 addresses
-	fmt.Println(ips)
-	// Output: [10.0.0.2 10.0.0.3]
 }
 
 func ExampleIPv4Net_Next() {
@@ -60,6 +53,12 @@ func ExampleIPv4Net_Nth() {
 	// Output: 10.0.0.255
 }
 
+func ExampleIPv4Net_NthSubnet() {
+	net, _ := ParseIPv4Net("10.0.0.0/24")
+	fmt.Println(net.NthSubnet(30,2)) // the 3rd /30 subnet
+	// Output: 10.0.0.8/30
+}
+
 func ExampleIPv4Net_Prev() {
 	net, _ := ParseIPv4Net("10.0.0.8/30")
 	prev := net.Prev()
@@ -76,24 +75,15 @@ func ExampleIPv4Net_PrevSib() {
 
 func ExampleIPv4Net_Resize() {
 	net, _ := ParseIPv4Net("10.0.0.8/30")
-	resized, _ := net.Resize(29)
+	resized := net.Resize(29)
 	fmt.Println(resized)
 	// Output: 10.0.0.8/29
-}
-
-func ExampleIPv4Net_Subnet() {
-	net, _ := ParseIPv4Net("10.0.0.0/24")
-	count := net.SubnetCount(30)           // how many /30 subnets can I make?
-	lastPair := count/2 - 1                // the page number for the last pair of /30 subnets
-	subs, _ := net.Subnet(30, lastPair, 2) // the last pair of /30 subnets
-	fmt.Println(subs)
-	// Output: [10.0.0.248/30 10.0.0.252/30]
 }
 
 func ExampleIPv4Net_Summ() {
 	net1, _ := ParseIPv4Net("10.0.0.0/30")
 	net2, _ := ParseIPv4Net("10.0.0.4/30")
-	summd, _ := net1.Summ(net2)
+	summd := net1.Summ(net2)
 	fmt.Println(summd)
 	// Output: 10.0.0.0/29
 }
@@ -204,8 +194,8 @@ func Test_IPv4Net_Fill(t *testing.T) {
 	}{
 		{
 			"10.0.0.0/24",
-			[]string{"10.0.0.0/24", "10.0.0.0/8", "10.0.0.8/30", "10.0.0.16/30", "10.0.0.16/28"},
-			[]string{"10.0.0.0/29", "10.0.0.8/30", "10.0.0.12/30", "10.0.0.16/28", "10.0.0.32/27", "10.0.0.64/26", "10.0.0.128/25"},
+			[]string{"10.0.0.0/24", "10.0.0.0/8", "10.0.0.8/30", "10.0.0.16/30", "10.0.0.16/29", "10.0.0.24/29"},
+			[]string{"10.0.0.0/29", "10.0.0.8/30", "10.0.0.12/30", "10.0.0.16/29", "10.0.0.24/29", "10.0.0.32/27", "10.0.0.64/26", "10.0.0.128/25"},
 		},
 		{
 			"128.0.0.0/1",
@@ -231,47 +221,6 @@ func Test_IPv4Net_Fill(t *testing.T) {
 			if e != list[i].String() {
 				t.Errorf("%s.Fill(%v)  Expected: %v  Result: %v", c.net, c.subs, c.filled, list)
 				break
-			}
-		}
-	}
-}
-
-func Test_IPv4Net_IPs(t *testing.T) {
-	cases := []struct {
-		net     string
-		page    uint32
-		perPage uint32
-		count   int
-		expect  []string
-		err     bool
-	}{
-		{"1.1.1.0/24", 0, 0, 32, nil, false}, // default page size
-		{"1.1.1.0/30", 0, 5, 4, []string{"1.1.1.0", "1.1.1.1", "1.1.1.2", "1.1.1.3"}, false},
-		{"1.1.1.0/24", 0, 256, 256, nil, false}, // extra large page
-		{"1.1.1.0/24", 2, 128, 0, nil, true},    // bad page
-		{"1.1.1.0/30", 2, 2, 0, nil, true},      // bad page
-	}
-
-	for _, c := range cases {
-		net, _ := ParseIPv4Net(c.net)
-		ips, err := net.IPs(c.page, c.perPage)
-		if err != nil {
-			if !c.err {
-				t.Errorf("%s.IPs(%d,%d) unexpected error: %s", c.net, c.page, c.perPage, err.Error())
-			}
-		} else {
-			if c.count != len(ips) {
-				t.Errorf("%s.IPs(%d,%d) is wrong length Expect: %d  Result: %d %v", c.net, c.page, c.perPage, c.count, len(ips), ips)
-				continue
-			}
-
-			if c.expect != nil {
-				for i, e := range ips {
-					if c.expect[i] != e.String() {
-						t.Errorf("%s.IPs(%d,%d) Expected: %v  Result: %v", c.net, c.page, c.perPage, c.expect, ips)
-						break
-					}
-				}
 			}
 		}
 	}
@@ -304,7 +253,7 @@ func Test_IPv4Net_Next(t *testing.T) {
 	}{
 		{"1.0.0.0/31", "1.0.0.2/31", false},
 		{"1.0.0.4/30", "1.0.0.8/29", false},
-		{"1.0.0.4/30", "1.0.0.8/29", false},
+		{"1.0.0.8/29", "1.0.0.16/28", false},
 		{"1.0.0.32/27", "1.0.0.64/26", false},
 		{"255.255.255.128/25", "", true},
 	}
@@ -377,6 +326,30 @@ func Test_IPv4Net_Nth(t *testing.T) {
 			}
 		} else if nth.String() != c.expect {
 			t.Errorf("%s.Nth(%d) Expect: %s  Result: %s", c.given, c.nth, c.expect, nth)
+		}
+	}
+}
+
+func Test_IPv4Net_NthSubnet(t *testing.T) {
+	cases := []struct {
+		given  string
+		prefix uint
+		nth    uint32
+		expect string
+	}{
+		{"192.168.1.0/24", 30, 0, "192.168.1.0/30"},
+		{"192.168.1.0/24", 26, 4, ""},
+	}
+
+	for _, c := range cases {
+		net, _ := ParseIPv4Net(c.given)
+		nth := net.NthSubnet(c.prefix,c.nth)
+		if nth == nil {
+			if c.expect != "" {
+				t.Errorf("%s.NthSubnet(%d,%d) Expect: %s  Result: nil", c.given, c.prefix, c.nth, c.expect)
+			}
+		} else if nth.String() != c.expect {
+			t.Errorf("%s.NthSubnet(%d,%d) Expect: %s  Result: %s", c.given, c.prefix, c.nth, c.expect, nth)
 		}
 	}
 }
@@ -477,7 +450,7 @@ func Test_IPv4Net_Resize(t *testing.T) {
 
 	for _, c := range cases {
 		net, _ := ParseIPv4Net(c.net)
-		net, _ = net.Resize(c.m)
+		net = net.Resize(c.m)
 		if net.String() != c.expect {
 			t.Errorf("%s.Resize(%d) Expect: %s  Result: %s", c.expect, net)
 		}
@@ -499,54 +472,6 @@ func Test_IPv4Net_String(t *testing.T) {
 		net, _ := ParseIPv4Net(c.given)
 		if net.String() != c.expect {
 			t.Errorf("%s.String() Expect: %s  Result: %s", c.given, c.expect, net)
-		}
-	}
-}
-
-func Test_IPv4Net_Subnet(t *testing.T) {
-	cases := []struct {
-		net     string
-		prefix  uint
-		page    uint32
-		perPage uint32
-		count   int
-		expect  []string
-		err     bool
-	}{
-		{"1.1.1.0/24", 26, 0, 0, 4, []string{"1.1.1.0/26", "1.1.1.64/26", "1.1.1.128/26", "1.1.1.192/26"}, false},
-		{"1.1.1.0/24", 26, 0, 5, 4, []string{"1.1.1.0/26", "1.1.1.64/26", "1.1.1.128/26", "1.1.1.192/26"}, false},
-		{"1.1.1.0/24", 26, 0, 2, 2, []string{"1.1.1.0/26", "1.1.1.64/26"}, false},
-		{"1.1.1.0/24", 26, 1, 2, 2, []string{"1.1.1.128/26", "1.1.1.192/26"}, false},
-		{"1.1.1.0/24", 30, 31, 2, 2, []string{"1.1.1.248/30", "1.1.1.252/30"}, false},
-		{"1.1.1.0/24", 31, 0, 0, 32, nil, false},    // default page size
-		{"1.1.1.0/24", 32, 0, 256, 256, nil, false}, // extra large page
-		{"1.1.1.0/24", 30, 32, 2, 0, nil, true},     // bad page
-		{"1.1.1.0/24", 24, 2, 2, 0, nil, true},      // bad page
-		{"1.1.1.0/24", 24, 0, 0, 0, nil, true},      // prefix len is not greater
-		{"1.1.1.0/24", 33, 0, 0, 0, nil, true},      // prefix is invalid
-	}
-
-	for _, c := range cases {
-		net, _ := ParseIPv4Net(c.net)
-		subs, err := net.Subnet(c.prefix, c.page, c.perPage)
-		if err != nil {
-			if !c.err {
-				t.Errorf("%s.Subnet(%d,%d,%d) unexpected error: %s", c.net, c.prefix, c.perPage, err.Error())
-			}
-		} else {
-			if c.count != len(subs) {
-				t.Errorf("%s.Subnet(%d,%d,%d) is wrong length Expect: %d  Result: %d %v", c.net, c.prefix, c.page, c.perPage, c.count, len(subs), subs)
-				continue
-			}
-
-			if c.expect != nil {
-				for i, e := range subs {
-					if c.expect[i] != e.String() {
-						t.Errorf("%s.Subnet(%d,%d,%d) Expected: %v  Result: %v", c.net, c.prefix, c.page, c.perPage, c.expect, subs)
-						break
-					}
-				}
-			}
 		}
 	}
 }
@@ -591,13 +516,13 @@ func Test_IPv4Net_Summ(t *testing.T) {
 	for _, c := range cases {
 		net, _ := ParseIPv4Net(c.net)
 		other, _ := ParseIPv4Net(c.other)
-		summ, err := net.Summ(other)
+		summ := net.Summ(other)
 
-		if err != nil {
+		if summ == nil {
 			if !c.err {
-				t.Errorf("%s.Summ(%s) unexpected error: %s", c.net, c.other, err.Error())
+				t.Errorf("%s.Summ(%s) unexpected error: could not summarize networks", c.net, c.other)
 			}
-		} else if err == nil && c.err {
+		} else if summ != nil && c.err {
 			t.Errorf("%s.Summ(%s) expected error but none raised.", c.net, c.other)
 		} else {
 			if summ.String() != c.expect {

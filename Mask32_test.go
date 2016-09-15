@@ -24,7 +24,7 @@ func ExampleMask32_Extended() {
 func Test_ParseMask32(t *testing.T) {
 	cases := []struct {
 		given  string
-		prefix uint
+		prefixLen uint
 		mask   uint32
 		err    bool
 	}{
@@ -55,8 +55,8 @@ func Test_ParseMask32(t *testing.T) {
 
 		if m32.mask != c.mask {
 			t.Errorf("ParseMask32(%s) mask. Expect: %08x  Result: %08x", c.given, m32.mask, c.mask)
-		} else if m32.prefix != c.prefix {
-			t.Errorf("ParseMask32(%s) prefix. Expect: %d  Result: %d", c.given, m32.prefix, c.prefix)
+		} else if m32.prefixLen != c.prefixLen {
+			t.Errorf("ParseMask32(%s) Expect: %d  Result: %d", c.given, m32.prefixLen, c.prefixLen)
 		}
 	}
 }
@@ -64,7 +64,7 @@ func Test_ParseMask32(t *testing.T) {
 func Test_NewMask32(t *testing.T) {
 	cases := []struct {
 		given  uint
-		prefix uint
+		prefixLen uint
 		mask   uint32
 		err    bool
 	}{
@@ -91,8 +91,8 @@ func Test_NewMask32(t *testing.T) {
 
 		if m32.mask != c.mask {
 			t.Errorf("NewMask(%d). Expect: %x  Result: %x", c.given, m32.mask, c.mask)
-		} else if m32.prefix != c.prefix {
-			t.Errorf("NewMask(%d). Expect: %d  Result: %d", c.given, m32.prefix, c.prefix)
+		} else if m32.prefixLen != c.prefixLen {
+			t.Errorf("NewMask(%d). Expect: %d  Result: %d", c.given, m32.prefixLen, c.prefixLen)
 		}
 	}
 }
