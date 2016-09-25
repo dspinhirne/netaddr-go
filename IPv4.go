@@ -69,7 +69,7 @@ func (ip *IPv4) MulticastMac() EUI48 {
 
 // Next returns the next consecutive IPv4 or nil if the end of the address space is reached.
 func (ip *IPv4) Next() *IPv4 {
-	if ip.addr == ALL_ONES32{
+	if ip.addr == F32{
 		return nil
 	}
 	return NewIPv4(ip.addr + 1)

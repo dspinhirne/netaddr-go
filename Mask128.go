@@ -62,7 +62,7 @@ func (m128 *Mask128) Len() uint64 {
 	if m128.prefixLen <= 64 {
 		return 0
 	}
-	return m128.hostIdMask ^ ALL_ONES64 + 1 // bit flip the netmask and add 1
+	return m128.hostIdMask ^ F64 + 1 // bit flip the netmask and add 1
 }
 
 // NetIdMask returns the internal uint64 mask for the network portion of the mask.
@@ -88,10 +88,10 @@ func initMask128(prefixLen uint) *Mask128 {
 	m128 := new(Mask128)
 	m128.prefixLen = prefixLen
 	if prefixLen <= 64 {
-		m128.netIdMask = ALL_ONES64 ^ (ALL_ONES64 >> uint64(prefixLen))
+		m128.netIdMask = F64 ^ (F64 >> uint64(prefixLen))
 	} else {
-		m128.netIdMask = ALL_ONES64
-		m128.hostIdMask = ALL_ONES64 ^ (ALL_ONES64 >> uint64(prefixLen-64))
+		m128.netIdMask = F64
+		m128.hostIdMask = F64 ^ (F64 >> uint64(prefixLen-64))
 	}
 	return m128
 }

@@ -12,7 +12,7 @@ func Test_ParseMask128(t *testing.T) {
 	}{
 		{" 8 ", 8, 0xff00000000000000, 0, false},
 		{"/32", 32, 0xffffffff00000000, 0, false},
-		{"/128", 128, ALL_ONES64, ALL_ONES64, false},
+		{"/128", 128, F64, F64, false},
 		{"0", 0, 0, 0, false},
 		{"//32", 0, 0, 0, true},
 		{"/129", 0, 0, 0, true},
@@ -51,7 +51,7 @@ func Test_NewMask128(t *testing.T) {
 	}{
 		{8, 8, 0xff00000000000000, 0, false},
 		{32, 32, 0xffffffff00000000, 0, false},
-		{128, 128, ALL_ONES64, ALL_ONES64, false},
+		{128, 128, F64, F64, false},
 		{0, 0, 0, 0, false},
 		{129, 0, 0, 0, true},
 	}

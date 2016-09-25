@@ -117,8 +117,8 @@ func Test_IPv6Net_Next(t *testing.T) {
 	}{
 		{"::/127", "::2/127", false},
 		{"::4/126", "::8/125", false},
-		{"0:0:0:1:8000::/65", "0:0:0:1::/64", false}, // cross /64 boundary
-		{"0:0:0:2:8000::/65", "0:0:0:2::/63", false}, // cross /64 boundary + 1
+		{"::1:8000:0:0:0/65", "0:0:0:2::/63", false}, // cross /64 boundary
+		{"::2:8000:0:0:0/65", "0:0:0:3::/64", false}, // cross /64 boundary
 		{"1::/15", "2::/15", false},
 		{"4::/14", "8::/13", false},
 		{"ffff::/16", "", true},
@@ -147,6 +147,7 @@ func Test_IPv6Net_NextSib(t *testing.T) {
 		next string
 		end  bool
 	}{
+		{"::1:8000:0:0:0/65", "0:0:0:2::/65", false}, // add bits across /64 boundary
 		{"0:0:0:1::/64", "0:0:0:2::/64", false},
 		{"1::/16", "2::/16", false},
 		{"ffff::/16", "", true},

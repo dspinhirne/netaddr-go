@@ -122,12 +122,12 @@ func (net *IPv4Net) Fill(list IPv4NetList) IPv4NetList {
 		}
 
 		// fill gaps between subnets
-		sib := net.nthSib(1, false)
+		sib := net.nthNextSib(1)
 		var ceil uint32
 		if sib != nil {
 			ceil = sib.base.addr
 		} else {
-			ceil = ALL_ONES32
+			ceil = F32
 		}
 		for i := 0; i < len(subs); i += 1 {
 			sub := subs[i]
@@ -164,7 +164,7 @@ func (net *IPv4Net) Network() *IPv4 {
 // Next returns the next largest consecutive IP network
 // or nil if the end of the address space is reached.
 func (net *IPv4Net) Next() *IPv4Net {
-	addr := net.nthSib(1, false)
+	addr := net.nthNextSib(1)
 	if addr == nil { // end of address space reached
 		return nil
 	}
@@ -174,7 +174,7 @@ func (net *IPv4Net) Next() *IPv4Net {
 // NextSib returns the network immediately following this one.
 // It will return nil if the end of the address space is reached.
 func (net *IPv4Net) NextSib() *IPv4Net {
-	return net.nthSib(1, false)
+	return net.nthNextSib(1)
 }
 
 // Nth returns the IP address at the given index.
@@ -196,20 +196,25 @@ func (net *IPv4Net) NthSubnet(prefixLen uint, index uint32) *IPv4Net {
 		return nil
 	}
 	sub0 := net.Resize(prefixLen)
-	return sub0.nthSib(index,false)
+	return sub0.nthNextSib(index)
 }
 
 // Prev returns the previous largest consecutive IP network
 // or nil if the start of the address space is reached.
 func (net *IPv4Net) Prev() *IPv4Net {
 	resized := net.grow()
-	return resized.nthSib(1, true)
+	return resized.PrevSib()
 }
 
 // PrevSib returns the network immediately preceding this one.
 // It will return nil if this is 0.0.0.0.
 func (net *IPv4Net) PrevSib() *IPv4Net {
-	return net.nthSib(1, true)
+	if net.base.addr == 0 {
+		return nil
+	}
+	shift := 32 - net.m32.prefixLen
+	addr := (net.base.addr>>shift - 1) << shift
+	return &IPv4Net{NewIPv4(addr), net.m32}
 }
 
 /*
@@ -233,8 +238,8 @@ func (net *IPv4Net) Rel(other *IPv4Net) (bool, int) {
 
 	// when networks are not equal we can use hostmask to test if they are
 	// related and which is the supernet vs the subnet
-	netHostmask := net.m32.mask ^ ALL_ONES32
-	otherHostmask := other.m32.mask ^ ALL_ONES32
+	netHostmask := net.m32.mask ^ F32
+	otherHostmask := other.m32.mask ^ F32
 	if net.base.addr|netHostmask == other.base.addr|netHostmask {
 		return true, 1
 	} else if net.base.addr|otherHostmask == other.base.addr|otherHostmask {
@@ -345,23 +350,12 @@ func (net *IPv4Net) grow() *IPv4Net {
 	return initIPv4Net(NewIPv4(addr), initMask32(prefixLen))
 }
 
-// nthSib returns the nth next sibling network or nil if address space exceeded.
-// nthSib will return the nth previous sibling if prev is true
-func (net *IPv4Net) nthSib(nth uint32, prev bool) *IPv4Net {
-	var addr uint32
-	// right shift by # of bits of host portion of address, add nth.
-	// and left shift back. this is the sibling network.
+// nthNextSib returns the nth next sibling network or nil if address space exceeded.
+func (net *IPv4Net) nthNextSib(nth uint32) *IPv4Net {
 	shift := 32 - net.m32.prefixLen
-	if prev {
-		if net.base.addr == 0{
-			return nil
-		}
-		addr = (net.base.addr>>shift - nth) << shift
-	} else {
-		addr = (net.base.addr>>shift + nth) << shift
-		if addr < net.base.addr {
-			return nil
-		}
+	addr := (net.base.addr>>shift + nth) << shift
+	if addr == 0 { // we exceeded the address space
+		return nil
 	}
-	return initIPv4Net(NewIPv4(addr), net.m32)
+	return &IPv4Net{NewIPv4(addr), net.m32}
 }

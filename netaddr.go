@@ -10,10 +10,10 @@ import (
 
 const (
 	// 32 bits worth of '1'
-	ALL_ONES32 uint32 = 0xffffffff
+	F32 uint32 = 0xffffffff
 
 	// 64 bits worth of '1'
-	ALL_ONES64 uint64 = 0xffffffffffffffff
+	F64 uint64 = 0xffffffffffffffff
 )
 
 // IPv4PrefixLen returns the prefix length needed to hold the

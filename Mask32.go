@@ -43,7 +43,7 @@ func ParseMask32(netmask string) (*Mask32, error) {
 	for i := 32; i > 0; i -= 1 {
 		if u32&1 == 1 {
 			hostmask = hostmask >> 1
-			if mask^hostmask != ALL_ONES32 {
+			if mask^hostmask != F32 {
 				return nil, fmt.Errorf("Netmask '%s' is invalid. It contains '1' bits in its host portion.", netmask)
 			}
 			break
@@ -102,7 +102,7 @@ func (m32 *Mask32) Len() uint32 {
 	if m32.mask == 0 {
 		return 0
 	}
-	return m32.mask ^ ALL_ONES32 + 1 // bit flip the netmask and add 1
+	return m32.mask ^ F32 + 1 // bit flip the netmask and add 1
 }
 
 // Mask returns the internal uint32 mask.
@@ -128,6 +128,6 @@ func (m32 *Mask32) String() string {
 // initMask32 creates and inits a Mask32
 func initMask32(prefixLen uint) *Mask32 {
 	m32 := &Mask32{prefixLen: prefixLen}
-	m32.mask = ALL_ONES32 ^ (ALL_ONES32 >> uint32(prefixLen))
+	m32.mask = F32 ^ (F32 >> uint32(prefixLen))
 	return m32
 }

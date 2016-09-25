@@ -108,12 +108,12 @@ func (net *IPv6Net) Fill(list IPv6NetList) IPv6NetList {
 		}
 
 		// fill gaps between subnets
-		sib := net.nthSib(1, false)
+		sib := net.nthNextSib(1)
 		var ceil *IPv6
 		if sib != nil {
 			ceil = sib.base
 		} else {
-			ceil = NewIPv6(ALL_ONES64, ALL_ONES64)
+			ceil = NewIPv6(F64, F64)
 		}
 		for i := 0; i < len(subs); i += 1 {
 			sub := subs[i]
@@ -156,7 +156,7 @@ func (net *IPv6Net) Network() *IPv6 {
 // Next returns the next largest consecutive IP network
 // or nil if the end of the address space is reached.
 func (net *IPv6Net) Next() *IPv6Net {
-	next := net.nthSib(1, false)
+	next := net.nthNextSib(1)
 	if next == nil { // passed end of addr space
 		return nil
 	}
@@ -166,13 +166,13 @@ func (net *IPv6Net) Next() *IPv6Net {
 // NextSib returns the network immediately following this one.
 // It will return nil if the end of the address space is reached.
 func (net *IPv6Net) NextSib() *IPv6Net {
-	return net.nthSib(1, false)
+	return net.nthNextSib(1)
 }
 
 // Nth returns the IP address at the given index.
 // If the range is exceeded then return nil.
 // This only works for /64 and greater; if the prefix length is < 64 then return nil.
-// For /64 networks the max index is ALL_ONES64.
+// For /64 networks the max index is F64.
 // If the prefix length is > 64 then use the Len() method to deterimine the size of the range.
 func (net *IPv6Net) Nth(index uint64) *IPv6 {
 	if net.m128.prefixLen < 64 || (net.m128.prefixLen > 64 && index >= net.Len()) {
@@ -190,20 +190,33 @@ func (net *IPv6Net) NthSubnet(prefixLen uint, index uint64) *IPv6Net {
 		return nil
 	}
 	sub0 := net.Resize(prefixLen)
-	return sub0.nthSib(index,false)
+	return sub0.nthNextSib(index)
 }
 
 // Prev returns the previous largest consecutive IP network
 // or nil if the start of the address space is reached.
 func (net *IPv6Net) Prev() *IPv6Net {
 	resized := net.grow()
-	return resized.nthSib(1, true)
+	return resized.PrevSib()
 }
 
 // PrevSib returns the network immediately preceding this one.
 // It will return nil if start of the address space is reached.
 func (net *IPv6Net) PrevSib() *IPv6Net {
-	return net.nthSib(1, true)
+	if net.base.IsZero(){
+		return nil
+	}
+	var netId,hostId uint64
+	if net.m128.prefixLen <= 64{ // easy. just working with netId
+		shift := 64 - net.m128.prefixLen
+		netId = (net.base.netId>>shift - 1) << shift
+		hostId = net.base.hostId
+	} else{
+		shift := 128 - net.m128.prefixLen
+		netId = net.base.netId
+		hostId = (net.base.hostId>>shift - 1) << shift
+	}
+	return &IPv6Net{NewIPv6(netId, hostId), net.m128}
 }
 
 /*
@@ -228,8 +241,8 @@ func (net *IPv6Net) Rel(other *IPv6Net) (bool, int) {
 
 	// when networks are not equal we can use hostmask to test if they are
 	// related and which is the supernet vs the subnet
-	netHostmask := []uint64{net.m128.netIdMask ^ ALL_ONES64, net.m128.hostIdMask ^ ALL_ONES64}
-	otherHostmask := []uint64{other.m128.netIdMask ^ ALL_ONES64, other.m128.hostIdMask ^ ALL_ONES64}
+	netHostmask := []uint64{net.m128.netIdMask ^ F64, net.m128.hostIdMask ^ F64}
+	otherHostmask := []uint64{other.m128.netIdMask ^ F64, other.m128.hostIdMask ^ F64}
 	if net.base.netId|netHostmask[0] == other.base.netId|netHostmask[0] &&
 		net.base.hostId|netHostmask[1] == other.base.hostId|netHostmask[1] {
 		return true, 1
@@ -390,47 +403,32 @@ func (net *IPv6Net) grow() *IPv6Net {
 
 }
 
-// nthSib returns the nth next sibling network or nil if address space exceeded.
-// nthSib will return the nth previous sibling if prev is true
-func (net *IPv6Net) nthSib(nth uint64, prev bool) *IPv6Net {
-	if prev && net.base.netId == 0 && net.base.hostId == 0 { // at start of addr space
+// nthNextSib returns the nth next sibling network or nil if address space exceeded.
+func (net *IPv6Net) nthNextSib(nth uint64) *IPv6Net {
+	var netId,hostId uint64
+	// this can be complex since it is possible to cross the /64 boundary
+	if net.m128.prefixLen <= 64{ // easy. just working with netId
+		shift := 64 - net.m128.prefixLen
+		netId = (net.base.netId>>shift + nth) << shift
+		hostId = net.base.hostId
+	} else{
+		shift := 128 - net.m128.prefixLen
+		netId = net.base.netId
+		hostId = net.base.hostId >> shift
+		if shift < 32 && nth <= uint64(F32){ // easy. just working with hostId since we cant exceed its 64-bit capacity
+			hostId = (hostId + nth) << shift
+		} else{ // less easy. we need to work with netId and hostId
+			hostId = (netId << (64-shift)) | hostId // borrow some bits from netId into the hostId
+			netId = netId >> shift
+			hostId += nth
+			netId = (netId << shift) | (hostId >> (64-shift)) // put our borrowed bits back. but modified
+			hostId = hostId<<shift // restore hostId
+		}
+	}
+	ip := NewIPv6(netId, hostId)
+	if ip.IsZero(){ // we exceeded the address space
 		return nil
 	}
-	var sib *IPv6Net
-	if net.m128.prefixLen <= 64 {
-		sib = net.nthNetIdSib(nth, prev)
-	} else {
-		sib = net.nthHostIdSib(nth, prev)
-	}
-
-	if !prev && sib.base.netId == 0 && sib.base.hostId == 0 { // addr space exceeded
-		return nil
-	}
-	return sib
+	return &IPv6Net{ip, net.m128}
 }
 
-// nthHostIdSib returns the nth next sibling network using the hostID portion of the address.
-// nthHostIdSib will return the nth previous sibling if prev is true
-func (net *IPv6Net) nthHostIdSib(nth uint64, prev bool) *IPv6Net {
-	shift := 128 - net.m128.prefixLen
-	hostId := net.base.hostId
-	if prev {
-		hostId = (hostId>>shift - nth) << shift
-	} else {
-		hostId = (hostId>>shift + nth) << shift
-	}
-	return initIPv6Net(NewIPv6(net.base.netId, hostId), net.m128)
-}
-
-// nthNetIdSib returns the nth next sibling network using the netID portion of the address.
-// nthNetIdSib will return the nth previous sibling if prev is true
-func (net *IPv6Net) nthNetIdSib(nth uint64, prev bool) *IPv6Net {
-	shift := 64 - net.m128.prefixLen
-	netId := net.base.netId
-	if prev {
-		netId = (netId>>shift - nth) << shift
-	} else {
-		netId = (netId>>shift + nth) << shift
-	}
-	return initIPv6Net(NewIPv6(netId, net.base.hostId), net.m128)
-}

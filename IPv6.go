@@ -112,6 +112,14 @@ func (ip *IPv6) HostId() uint64 {
 	return ip.hostId
 }
 
+// IsZero returns true if this address is "::"
+func (ip *IPv6) IsZero() bool{
+	if ip.netId | ip.hostId == 0{
+		return true
+	}
+	return false
+}
+
 // Long returns the IPv6 address as a string in long (uncompressed) format.
 func (ip *IPv6) Long() string {
 	return fmt.Sprintf(
@@ -134,7 +142,7 @@ func (ip *IPv6) NetId() uint64 {
 
 // Next returns the next consecutive IPv6 or nil if the end of this /64 address space is reached.
 func (ip *IPv6) Next() *IPv6 {
-	if ip.hostId == ALL_ONES64{
+	if ip.hostId == F64{
 		return nil
 	}
 	return NewIPv6(ip.netId, ip.hostId + 1)
