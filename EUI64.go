@@ -32,11 +32,9 @@ func ParseEUI64(eui string) (EUI64, error) {
 // EUI64 (Extended Unique Identifier 64-bit, or EUI-64) represents a 64-bit hardware address.
 type EUI64 uint64
 
-func (eui EUI64) String() string {
-	if eui == 0 {
-		return ""
-	}
-	bites := []byte{
+// Bytes returns a slice containing each byte of the EUI64. 
+func (eui EUI64) Bytes() []byte {
+	return []byte{
 		byte(eui >> 56 & 0xff),
 		byte(eui >> 48 & 0xff),
 		byte(eui >> 40 & 0xff),
@@ -46,6 +44,13 @@ func (eui EUI64) String() string {
 		byte(eui >> 8 & 0xff),
 		byte(eui & 0xff),
 	}
+}
+
+func (eui EUI64) String() string {
+	if eui == 0 {
+		return ""
+	}
+	bites := eui.Bytes()
 	return fmt.Sprintf("%02x-%02x-%02x-%02x-%02x-%02x-%02x-%02x", bites[0], bites[1], bites[2], bites[3],
 		bites[4], bites[5], bites[6], bites[7])
 }

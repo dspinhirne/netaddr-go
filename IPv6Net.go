@@ -395,12 +395,11 @@ func (net *IPv6Net) grow() *IPv6Net {
 	if longPrefix { // add back the 64 bits we subtracted above
 		prefixLen += 64
 	}
-	resized := initIPv6Net(NewIPv6(net.base.netId, net.base.hostId), initMask128(prefixLen))
+	resized := &IPv6Net{NewIPv6(net.base.netId, net.base.hostId), initMask128(prefixLen)}
 	if prefixLen == 64 && longPrefix { // we were a longPrefix network and we crossed the /64 boundary. need to keep going
 		resized = resized.grow()
 	}
 	return resized
-
 }
 
 // nthNextSib returns the nth next sibling network or nil if address space exceeded.

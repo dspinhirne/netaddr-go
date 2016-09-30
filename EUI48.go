@@ -33,11 +33,9 @@ func ParseEUI48(eui string) (EUI48, error) {
 // It is typically associated with mac-addresses.
 type EUI48 uint64
 
-func (eui EUI48) String() string {
-	if eui == 0 {
-		return ""
-	}
-	bites := []byte{
+// Bytes returns a slice containing each byte of the EUI48. 
+func (eui EUI48) Bytes() []byte {
+	return []byte{
 		byte(eui >> 40 & 0xff),
 		byte(eui >> 32 & 0xff),
 		byte(eui >> 24 & 0xff),
@@ -45,6 +43,13 @@ func (eui EUI48) String() string {
 		byte(eui >> 8 & 0xff),
 		byte(eui & 0xff),
 	}
+}
+
+func (eui EUI48) String() string {
+	if eui == 0 {
+		return ""
+	}
+	bites := eui.Bytes()
 	return fmt.Sprintf("%02x-%02x-%02x-%02x-%02x-%02x", bites[0], bites[1], bites[2], bites[3], bites[4], bites[5])
 }
 

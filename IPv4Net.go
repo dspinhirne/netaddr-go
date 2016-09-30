@@ -347,7 +347,7 @@ func (net *IPv4Net) grow() *IPv4Net {
 			break
 		}
 	}
-	return initIPv4Net(NewIPv4(addr), initMask32(prefixLen))
+	return &IPv4Net{NewIPv4(addr), initMask32(prefixLen)}
 }
 
 // nthNextSib returns the nth next sibling network or nil if address space exceeded.
