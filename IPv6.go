@@ -33,7 +33,7 @@ func ParseIPv6(ip string) (*IPv6, error) {
 		upHalf := strings.Split(halves[0], ":")
 		loHalf := strings.Split(halves[1], ":")
 		numGroups := len(upHalf) + len(loHalf)
-		if numGroups > 6 {
+		if numGroups > 8 {
 			return nil, fmt.Errorf("Error parsing '%s'. Shorthand formatted address is too long.", ip)
 		}
 		groups = upHalf
