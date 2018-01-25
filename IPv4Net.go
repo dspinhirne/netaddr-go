@@ -5,6 +5,12 @@ import (
 	"strings"
 )
 
+// IPv4Net represents an IPv4 network.
+type IPv4Net struct {
+	base *IPv4
+	m32  *Mask32
+}
+
 /*
 ParseIPv4Net parses a string into an IPv4Net type. Accepts addresses in the form of:
 	* single IP (eg. 192.168.1.1 -- defaults to /32)
@@ -55,12 +61,6 @@ func NewIPv4Net(ip *IPv4, m32 *Mask32) (*IPv4Net, error) {
 		return nil, fmt.Errorf("Argument ip must not be nil.")
 	}
 	return initIPv4Net(ip, m32), nil
-}
-
-// IPv4Net represents an IPv4 network.
-type IPv4Net struct {
-	base *IPv4
-	m32  *Mask32
 }
 
 /*

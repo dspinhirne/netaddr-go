@@ -6,6 +6,12 @@ import (
 	"strings"
 )
 
+// Mask32 represents a 32-bit netmask used by IPv4Net.
+type Mask32 struct {
+	mask   uint32
+	prefixLen uint // prefix length
+}
+
 // ParseMask32 parses an IPv4 netmask or prefix length string to a Mask32 type.
 // Netmask must be in either dotted-quad format (y.y.y.y) or "slash"
 // format (eg. '/32' or just '32').
@@ -63,12 +69,6 @@ func NewMask32(prefixLen uint) (*Mask32, error) {
 		return nil, fmt.Errorf("Netmask length %d is too long for IPv4.", prefixLen)
 	}
 	return initMask32(prefixLen), nil
-}
-
-// Mask32 represents a 32-bit netmask used by IPv4Net.
-type Mask32 struct {
-	mask   uint32
-	prefixLen uint // prefix length
 }
 
 /*

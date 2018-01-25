@@ -5,6 +5,12 @@ import (
 	"strings"
 )
 
+// IPv6Net represents an IPv6 network.
+type IPv6Net struct {
+	base *IPv6
+	m128 *Mask128
+}
+
 /*
 ParseIPv6Net parses a string into an IPv6Net type. Accepts addresses in the form of:
 	* single IP (eg. FE80::1)
@@ -46,12 +52,6 @@ func NewIPv6Net(ip *IPv6, m128 *Mask128) (*IPv6Net, error) {
 	}
 
 	return initIPv6Net(ip, m128), nil
-}
-
-// IPv6Net represents an IPv6 network.
-type IPv6Net struct {
-	base *IPv6
-	m128 *Mask128
 }
 
 /*

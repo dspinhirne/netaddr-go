@@ -5,6 +5,12 @@ import (
 	"strings"
 )
 
+type IPv6 struct {
+	netId  uint64 // upper 64 bits
+	hostId uint64 // lower 64 bits
+	str    string // cached String()
+}
+
 /*
 ParseIPv6 arses a string into an IPv6 type.
 IP address should be in one of the following formats and should not contain a netmask.
@@ -73,12 +79,6 @@ the upper/lower 64-bits of the address respectively
 */
 func NewIPv6(netId, hostId uint64) *IPv6 {
 	return &IPv6{netId: netId, hostId: hostId}
-}
-
-type IPv6 struct {
-	netId  uint64 // upper 64 bits
-	hostId uint64 // lower 64 bits
-	str    string // cached String()
 }
 
 /*
@@ -202,3 +202,7 @@ func (ip *IPv6) String() string {
 	return strings.Join(hexStr, ":")
 }
 
+// ToNet returns the IPv6 as a /64 IPv6Net
+func (ip *IPv6) ToNet() *IPv6Net{
+	return &IPv6Net{ip,initMask128(64)}
+}

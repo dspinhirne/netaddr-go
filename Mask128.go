@@ -6,6 +6,13 @@ import (
 	"strings"
 )
 
+// Mask128 represents a 128-bit netmask used by IPv6Net.
+type Mask128 struct {
+	netIdMask  uint64 // mask for the netId portion of the address
+	hostIdMask uint64 // mask for the hostId portion of the address
+	prefixLen     uint   // prefix length
+}
+
 // ParseMask128 parses a prefix length string to a Mask128 type.
 // Netmask must be in "slash" format (eg. '/64' or just '64').
 func ParseMask128(prefixLen string) (*Mask128, error) {
@@ -25,13 +32,6 @@ func NewMask128(prefixLen uint) (*Mask128, error) {
 		return nil, fmt.Errorf("Netmask length %d is too long for IPv6.", prefixLen)
 	}
 	return initMask128(prefixLen), nil
-}
-
-// Mask128 represents a 128-bit netmask used by IPv6Net.
-type Mask128 struct {
-	netIdMask  uint64 // mask for the netId portion of the address
-	hostIdMask uint64 // mask for the hostId portion of the address
-	prefixLen     uint   // prefix length
 }
 
 /*

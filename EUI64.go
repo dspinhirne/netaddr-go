@@ -5,6 +5,9 @@ import (
 	"strconv"
 )
 
+// EUI64 (Extended Unique Identifier 64-bit, or EUI-64) represents a 64-bit hardware address.
+type EUI64 uint64
+
 /*
 Parse an EUI-64 string into an EUI64 type.
 This will successfully parse most of the typically used formats such as:
@@ -28,9 +31,6 @@ func ParseEUI64(eui string) (EUI64, error) {
 	}
 	return EUI64(u64), nil
 }
-
-// EUI64 (Extended Unique Identifier 64-bit, or EUI-64) represents a 64-bit hardware address.
-type EUI64 uint64
 
 // Bytes returns a slice containing each byte of the EUI64. 
 func (eui EUI64) Bytes() []byte {

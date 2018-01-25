@@ -104,3 +104,12 @@ func Test_IPv4_String(t *testing.T) {
 		}
 	}
 }
+
+func Test_Ipv4_ToNet(t *testing.T) {
+	ip, _ := ParseIPv4("192.168.1.1")
+	net, _ := ParseIPv4Net("192.168.1.1")
+	cmp,_ := net.Cmp(ip.ToNet())
+	if cmp != 0 {
+		t.Errorf("%s.ToNet() Expect: %s  Result: %s", ip, net, ip.ToNet())
+	}
+}

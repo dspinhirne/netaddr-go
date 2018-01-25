@@ -5,6 +5,9 @@ import (
 	"sort"
 )
 
+// IPv4NetList is a slice of IPv4 types
+type IPv4NetList []*IPv4Net
+
 // NewIPv4NetList parses a slice of IP networks into a IPv4NetList.
 func NewIPv4NetList(networks []string) (IPv4NetList, error) {
 	list := make(IPv4NetList, len(networks), len(networks))
@@ -17,9 +20,6 @@ func NewIPv4NetList(networks []string) (IPv4NetList, error) {
 	}
 	return list, nil
 }
-
-// IPv4NetList is a slice of IPv4 types
-type IPv4NetList []*IPv4Net
 
 // Len is used to implement the sort interface
 func (list IPv4NetList) Len() int { return len(list) }

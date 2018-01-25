@@ -5,6 +5,9 @@ import (
 	"sort"
 )
 
+// IPv6NetList is a slice of IPv6 types
+type IPv6NetList []*IPv6Net
+
 // NewIPv6NetList parses a slice of IP networks into a IPv6NetList.
 func NewIPv6NetList(networks []string) (IPv6NetList, error) {
 	list := make(IPv6NetList, len(networks), len(networks))
@@ -17,9 +20,6 @@ func NewIPv6NetList(networks []string) (IPv6NetList, error) {
 	}
 	return list, nil
 }
-
-// IPv6NetList is a slice of IPv6 types
-type IPv6NetList []*IPv6Net
 
 // Len is used to implement the sort interface
 func (list IPv6NetList) Len() int { return len(list) }

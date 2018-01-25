@@ -131,3 +131,12 @@ func Test_IPv6_String(t *testing.T) {
 		}
 	}
 }
+
+func Test_Ipv6_ToNet(t *testing.T) {
+	ip, _ := ParseIPv6("1::")
+	net, _ := ParseIPv6Net("1::")
+	cmp,_ := net.Cmp(ip.ToNet())
+	if cmp != 0 {
+		t.Errorf("%s.ToNet() Expect: %s  Result: %s", ip, net, ip.ToNet())
+	}
+}

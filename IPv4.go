@@ -5,6 +5,11 @@ import (
 	"strings"
 )
 
+// IPv4 represents an version 4 IP address.
+type IPv4 struct {
+	addr uint32
+}
+
 // ParseIPv4 parses a string into an IPv4 type.
 // IP address should be in dotted-quad format (x.x.x.x) and should not contain a netmask.
 func ParseIPv4(ip string) (*IPv4, error) {
@@ -23,11 +28,6 @@ func ParseIPv4(ip string) (*IPv4, error) {
 // NewIPv4 creates an IPv4 type from a uint32
 func NewIPv4(addr uint32) *IPv4 {
 	return &IPv4{addr: addr}
-}
-
-// IPv4 represents an version 4 IP address.
-type IPv4 struct {
-	addr uint32
 }
 
 // Addr returns the internal uint32 address.
@@ -90,4 +90,9 @@ func (ip *IPv4) String() string {
 		ip.addr>>16&0xff,
 		ip.addr>>8&0xff,
 		ip.addr&0xff)
+}
+
+// ToNet returns the IPv4 as a /32 IPv4Net
+func (ip *IPv4) ToNet() *IPv4Net{
+	return &IPv4Net{ip,initMask32(32)}
 }

@@ -5,6 +5,10 @@ import (
 	"strconv"
 )
 
+// EUI48 (Extended Unique Identifier 48-bit, or EUI-48) represents a 48-bit hardware address.
+// It is typically associated with mac-addresses.
+type EUI48 uint64
+
 /*
 Parse an EUI-48 string into an EUI48 type.
 This will successfully parse most of the typically used formats such as:
@@ -28,10 +32,6 @@ func ParseEUI48(eui string) (EUI48, error) {
 	}
 	return EUI48(u64), nil
 }
-
-// EUI48 (Extended Unique Identifier 48-bit, or EUI-48) represents a 48-bit hardware address.
-// It is typically associated with mac-addresses.
-type EUI48 uint64
 
 // Bytes returns a slice containing each byte of the EUI48. 
 func (eui EUI48) Bytes() []byte {
