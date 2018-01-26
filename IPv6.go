@@ -202,7 +202,7 @@ func (ip *IPv6) String() string {
 	return strings.Join(hexStr, ":")
 }
 
-// ToNet returns the IPv6 as a /64 IPv6Net
+// ToNet returns the IPv6 as a IPv6Net
 func (ip *IPv6) ToNet() *IPv6Net{
 	return initIPv6Net(ip,nil)
 }

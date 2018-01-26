@@ -92,7 +92,7 @@ func (ip *IPv4) String() string {
 		ip.addr&0xff)
 }
 
-// ToNet returns the IPv4 as a /32 IPv4Net
+// ToNet returns the IPv4 as a IPv4Net
 func (ip *IPv4) ToNet() *IPv4Net{
 	return initIPv4Net(ip,nil)
 }
