@@ -94,5 +94,5 @@ func (ip *IPv4) String() string {
 
 // ToNet returns the IPv4 as a /32 IPv4Net
 func (ip *IPv4) ToNet() *IPv4Net{
-	return &IPv4Net{ip,initMask32(32)}
+	return initIPv4Net(ip,nil)
 }

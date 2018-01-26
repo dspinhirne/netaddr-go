@@ -204,5 +204,5 @@ func (ip *IPv6) String() string {
 
 // ToNet returns the IPv6 as a /64 IPv6Net
 func (ip *IPv6) ToNet() *IPv6Net{
-	return &IPv6Net{ip,initMask128(64)}
+	return initIPv6Net(ip,nil)
 }
