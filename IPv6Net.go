@@ -148,7 +148,7 @@ func (net *IPv6Net) Len() uint64 {
 	return net.m128.Len()
 }
 
-// String returns the network address as a string in long (uncomrpessed) format.
+// Long returns the network address as a string in long (uncomrpessed) format.
 func (net *IPv6Net) Long() string {
 	return net.base.Long() + net.m128.String()
 }
