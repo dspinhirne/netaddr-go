@@ -79,6 +79,16 @@ func (net *IPv6Net) Cmp(other *IPv6Net) (int, error) {
 	return net.m128.Cmp(other.m128), nil
 }
 
+// Contains returns true if the IPv4Net contains the IPv4
+func (net *IPv6Net) Contains(ip *IPv6) bool {
+	if ip != nil {
+		if (net.base.netId == ip.netId & net.m128.netIdMask) && (net.base.hostId == ip.hostId & net.m128.hostIdMask){
+			return true
+		}
+	}
+	return false
+}
+
 // Fill returns a copy of the given IPv6NetList, stripped of
 // any networks which are not subnets of this IPv6Net, and
 // with any missing gaps filled in.

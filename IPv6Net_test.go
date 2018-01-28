@@ -56,6 +56,26 @@ func Test_IPv6Net_Cmp(t *testing.T) {
 	}
 }
 
+func Test_IPv6Net_Contains(t *testing.T) {
+	cases := []struct {
+		net    string
+		ip     string
+		contains bool
+	}{
+		{"1:8::/29", "1:f::", true},
+		{"1:8::/29", "1:10::", false},
+		{"1:8::/29", "1:7::", false},
+	}
+
+	for _, c := range cases {
+		net,_ := ParseIPv6Net(c.net)
+		ip,_ := ParseIPv6(c.ip)
+		if c.contains != net.Contains(ip) {
+			t.Errorf("%s.Contains(%s) Expect: %v  Result: %v", c.net,c.ip,c.contains,!c.contains)
+		}
+	}
+}
+
 func Test_IPv6Net_Fill(t *testing.T) {
 	cases := []struct {
 		net    string

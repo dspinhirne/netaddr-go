@@ -186,6 +186,26 @@ func Test_IPv4Net_Cmp(t *testing.T) {
 	}
 }
 
+func Test_IPv4Net_Contains(t *testing.T) {
+	cases := []struct {
+		net    string
+		ip     string
+		contains bool
+	}{
+		{"1.0.0.8/29", "1.0.0.15", true},
+		{"1.0.0.8/29", "1.0.0.16", false},
+		{"1.0.0.8/29", "1.0.0.7", false},
+	}
+
+	for _, c := range cases {
+		net,_ := ParseIPv4Net(c.net)
+		ip,_ := ParseIPv4(c.ip)
+		if c.contains != net.Contains(ip) {
+			t.Errorf("%s.Contains(%s) Expect: %v  Result: %v", c.net,c.ip,c.contains,!c.contains)
+		}
+	}
+}
+
 func Test_IPv4Net_Fill(t *testing.T) {
 	cases := []struct {
 		net    string

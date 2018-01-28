@@ -88,6 +88,16 @@ func (net *IPv4Net) Cmp(other *IPv4Net) (int, error) {
 	return net.m32.Cmp(other.m32), nil
 }
 
+// Contains returns true if the IPv4Net contains the IPv4
+func (net *IPv4Net) Contains(ip *IPv4) bool {
+	if ip != nil {
+		if net.base.addr == ip.addr & net.m32.mask {
+			return true
+		}
+	}
+	return false
+}
+
 // Extended returns the network address as a string in extended format.
 func (net *IPv4Net) Extended() string {
 	return net.base.String() + " " + net.m32.Extended()
