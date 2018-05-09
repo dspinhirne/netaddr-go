@@ -22,7 +22,7 @@ func Test_ParseMask128(t *testing.T) {
 		m128, err := ParseMask128(c.given)
 		if err != nil {
 			if !c.expectErr {
-				t.Errorf("ParseMask128(%s) unexpected error: %s: %s", c.given, err.Error())
+				t.Errorf("ParseMask128(%s) unexpected error: %s", c.given, err.Error())
 			}
 			continue
 		}
@@ -71,7 +71,7 @@ func Test_NewMask128(t *testing.T) {
 		}
 
 		if m128.netIdMask != c.netIdMask || m128.hostIdMask != c.hostIdMask {
-			t.Errorf("Mask for '%s' did not yield expected result. %016x%016x != %016x%016x",
+			t.Errorf("Mask for '%d' did not yield expected result. %016x%016x != %016x%016x",
 				c.given, m128.netIdMask, m128.hostIdMask, c.netIdMask, c.hostIdMask)
 		} else if m128.prefixLen != c.prefixLen {
 			t.Errorf("Mask Length for /%d did not yield expected result. %d != %d", c.given, m128.prefixLen, c.prefixLen)

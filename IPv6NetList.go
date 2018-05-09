@@ -60,32 +60,26 @@ func (list IPv6NetList) Swap(i, j int) { list[i], list[j] = list[j], list[i] }
 // discardSubnets returns a sorted copy of the IPv6NetList with
 // any entries which are subnets of other entries removed.
 func (list IPv6NetList) discardSubnets() IPv6NetList {
-	var cleaned IPv6NetList
-	// group into 2 categories: supernets of, and unrelated to
-	// discard duplicates and subnets of
-	unrelated := IPv6NetList{}
-	supernets := IPv6NetList{}
+	keepers := IPv6NetList{}
 	last := list[len(list)-1]
+	keepLast := true
 	for _, e := range list {
 		isRel, rel := last.Rel(e)
-		if !isRel { // last is unrelated to e
-			unrelated = append(unrelated, e)
-		} else if isRel && rel == -1 { // last is subnet of e
-			supernets = append(supernets, e)
+		if !isRel { // keep unrelated nets
+			keepers = append(keepers, e)
+		} else if isRel && rel == -1 { // keep supernets but do not keepLast
+			keepers = append(keepers, e)
+			keepLast = false
 		}
 	}
 
-	if len(supernets) > 0 {
-		cleaned = supernets.discardSubnets()
-	} else {
-		cleaned = IPv6NetList{last}
+	if len(keepers) > 0 {
+		keepers = keepers.discardSubnets()
 	}
-
-	if len(unrelated) > 0 {
-		cleaned = append(cleaned, unrelated.discardSubnets()...)
+	if keepLast{
+		keepers = append(IPv6NetList{last}, keepers...)
 	}
-
-	return cleaned
+	return keepers
 }
 
 // summPeers returns a copy of the IPv6NetList with any

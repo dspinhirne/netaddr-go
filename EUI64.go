@@ -23,7 +23,7 @@ it contains exactly 16 hex characters with the optional delimiting characters
 func ParseEUI64(eui string) (EUI64, error) {
 	eui = cleanupEUI(eui)
 	if len(eui) != 16 {
-		return 0, fmt.Errorf("Must contain exactly 16 characters with optional delimiters.", eui)
+		return 0, fmt.Errorf("Must contain exactly 16 characters with optional delimiters.")
 	}
 	u64, err := strconv.ParseUint(eui, 16, 64)
 	if err != nil {

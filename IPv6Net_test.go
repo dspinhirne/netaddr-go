@@ -339,7 +339,7 @@ func Test_IPv6Net_Resize(t *testing.T) {
 		net, _ := ParseIPv6Net(c.net)
 		net = net.Resize(c.m)
 		if net.String() != c.expect {
-			t.Errorf("%s.Resize(%d) Expect: %s  Result: %s", c.expect, net)
+			t.Errorf("%s.Resize(%d) Expect: %s  Result: %s", c.net, c.m, c.expect, net)
 		}
 	}
 }
