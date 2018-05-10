@@ -16,6 +16,18 @@ const (
 	F64 uint64 = 0xffffffffffffffff
 )
 
+type IP interface{
+	String() string
+	Version() uint
+}
+
+type IPNet interface{
+	PrefixLen() uint
+	String() string
+	Version() uint
+}
+
+
 // IPv4PrefixLen returns the prefix length needed to hold the
 // number of IP addresses specified by "size".
 func IPv4PrefixLen(size uint) uint {
@@ -28,6 +40,22 @@ func IPv4PrefixLen(size uint) uint {
 		}
 	}
 	return prefix
+}
+
+// ParseIP parses a string into an IP
+func ParseIP(ip string) (IP,error){
+	if strings.Contains(ip, ":"){
+		return ParseIPv6(ip)
+	}
+	return ParseIPv4(ip)
+}
+
+// ParseIPNet parses a string into an IPNet
+func ParseIPNet(net string) (IPNet,error){
+	if strings.Contains(net, ":"){
+		return ParseIPv6Net(net)
+	}
+	return ParseIPv4Net(net)
 }
 
 // NON EXPORTED

@@ -209,6 +209,8 @@ func (net *IPv4Net) NthSubnet(prefixLen uint, index uint32) *IPv4Net {
 	return sub0.nthNextSib(index)
 }
 
+func (net *IPv4Net) PrefixLen() uint{return net.m32.PrefixLen()}
+
 // Prev returns the previous largest consecutive IP network
 // or nil if the start of the address space is reached.
 func (net *IPv4Net) Prev() *IPv4Net {
@@ -301,6 +303,8 @@ func (net *IPv4Net) Summ(other *IPv4Net) *IPv4Net {
 	return net.Resize(net.m32.prefixLen - 1)
 }
 
+func (ip *IPv4Net) Version() uint{return 4}
+
 // NON EXPORTED
 
 // backfill generates subnets between this net and the limit address.
@@ -369,3 +373,4 @@ func (net *IPv4Net) nthNextSib(nth uint32) *IPv4Net {
 	}
 	return &IPv4Net{NewIPv4(addr), net.m32}
 }
+

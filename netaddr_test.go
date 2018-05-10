@@ -9,6 +9,30 @@ func ExampleIPv4PrefixLen() {
 	// Output: 24
 }
 
+func ExampleParseIP() {
+	net,_ := ParseIP("10.0.0.0")
+	fmt.Println(net)
+	// Output: 10.0.0.0
+}
+
+func ExampleParseIP_6() {
+	net,_ := ParseIP("fec0::")
+	fmt.Println(net)
+	// Output: fec0::
+}
+
+func ExampleParseIPNet() {
+	net,_ := ParseIPNet("10.0.0.0/24")
+	fmt.Println(net)
+	// Output: 10.0.0.0/24
+}
+
+func ExampleParseIPNet_6() {
+	net,_ := ParseIPNet("fec0::/10")
+	fmt.Println(net)
+	// Output: fec0::/10
+}
+
 func Test_IPv4PrefixLen(t *testing.T) {
 	cases := []struct {
 		given  uint

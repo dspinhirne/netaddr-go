@@ -96,3 +96,5 @@ func (ip *IPv4) String() string {
 func (ip *IPv4) ToNet() *IPv4Net{
 	return initIPv4Net(ip,nil)
 }
+
+func (ip *IPv4) Version() uint{return 4}

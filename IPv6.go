@@ -206,3 +206,5 @@ func (ip *IPv6) String() string {
 func (ip *IPv6) ToNet() *IPv6Net{
 	return initIPv6Net(ip,nil)
 }
+
+func (ip *IPv6) Version() uint{return 6}
