@@ -22,10 +22,10 @@ type IP interface{
 }
 
 type IPNet interface{
-	PrefixLen() uint
 	String() string
 	Version() uint
 }
+
 
 
 // IPv4PrefixLen returns the prefix length needed to hold the

@@ -203,8 +203,6 @@ func (net *IPv6Net) NthSubnet(prefixLen uint, index uint64) *IPv6Net {
 	return sub0.nthNextSib(index)
 }
 
-func (net *IPv6Net) PrefixLen() uint{return net.m128.PrefixLen()}
-
 // Prev returns the previous largest consecutive IP network
 // or nil if the start of the address space is reached.
 func (net *IPv6Net) Prev() *IPv6Net {
