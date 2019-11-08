@@ -25,6 +25,17 @@ func ParseIPv6(ip string) (*IPv6, error) {
 	} // special case. just return zero address
 
 	var groups []string             // holds the 8 groups of hex strings representing the ipv6 addr
+	var ipv4Int uint32
+	if strings.Contains(ip, ".") { // check for ipv4 embedded addresses
+		elems := strings.Split(ip, ":")
+		ipv4,err := ParseIPv4(elems[len(elems)-1])
+		if err != nil{
+			return nil, fmt.Errorf("Error parsing '%s'. IPv4-embedded IPv6 address is invalid.", ip)
+		}
+		ip = strings.Replace(ip, elems[len(elems)-1], "0:0", 1) // temporarily remove the ipv4 portion
+		ipv4Int = ipv4.addr
+	}
+	
 	if strings.Contains(ip, "::") { // ip is using shorthand notation
 		halves := strings.Split(ip, "::")
 		if len(halves) != 2 {
@@ -69,6 +80,11 @@ func ParseIPv6(ip string) (*IPv6, error) {
 	} else {
 		addr.hostId = u64
 	}
+	
+	// append ipv4-embedded
+	if ipv4Int > 0{
+		addr.hostId = addr.hostId | uint64(ipv4Int)
+	}
 
 	return addr, nil
 }
@@ -110,6 +126,29 @@ func (ip *IPv6) Cmp(other *IPv6) (int, error) {
 // HostId returns the interal uint64 for the host id portion of the address.
 func (ip *IPv6) HostId() uint64 {
 	return ip.hostId
+}
+
+// IPv4 generates an IPv4 from an IPv6 address. The IPv4 address is generated based on the mechanism described by RFC 6052.
+// The argument pl (prefix length) should be one of: 32, 40, 48, 56, 64, or 96. Defaults to 96 unless one of the supported values is provided.
+func (ip *IPv6) IPv4(pl int) *IPv4{
+	if pl == 32{
+		return NewIPv4(uint32(ip.netId)) // ipv4 is in lower 32 of net id
+	} else if pl == 40{
+		i := uint32(ip.hostId >> 48) & 0xff // get the last 8 bits into position
+		i2 := (uint32(ip.netId) << 8) & 0xffffff00 // get bottom 24 of net id into position
+		return NewIPv4(i | i2)
+	} else if pl == 48{
+		i := uint32(ip.hostId >> 40) & 0xffff // get the last 16 bits into position
+		i2 := (uint32(ip.netId) << 16) & 0xffff0000 // get bottom 16 of net id into position
+		return NewIPv4(i | i2)
+	} else if pl == 56{
+		i := uint32(ip.hostId >> 32) & 0xffffff // get the last 24 bits into position
+		i2 := (uint32(ip.netId) << 24) & 0xff000000 // get bottom 8 of net id into position
+		return NewIPv4(i | i2)
+	} else if pl == 64{
+		return NewIPv4(uint32(ip.hostId >> 24)) // get relevant bits of host id into position
+	}
+	return NewIPv4(uint32(ip.hostId))
 }
 
 // IsZero returns true if this address is "::"

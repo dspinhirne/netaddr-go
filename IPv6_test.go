@@ -12,7 +12,6 @@ func Test_ParseIPv6(t *testing.T) {
 		{" :: ", 0, 0, false},
 		{"::0", 0, 0, false},
 		{"fe80::", 0xfe80000000000000, 0, false},
-		//{"::ffff:192.168.1.1",0,0xffffc0a80101,false}, // ipv4 mapped
 		{"fe80::1::", 0, 0, true},
 		{"::fe80::", 0, 0, true},
 		{"0:0:0:0:0:0:0:0:1", 0, 0, true},
@@ -34,6 +33,17 @@ func Test_ParseIPv6(t *testing.T) {
 		{"::1:2:3:4:5:6:7", 0x0000000100020003, 0x0004000500060007, false},
 		{"fec0", 0, 0, true},
 		{"fec0:::1", 0, 0, true},
+		{"64:ff9b::192.0.2.33", 0x0064ff9b00000000, 0x00000000c0000221, false},
+		{"64:ff9b::0:192.0.2.33", 0x0064ff9b00000000, 0x00000000c0000221, false},
+		{"64:ff9b::0:0:192.0.2.33", 0x0064ff9b00000000, 0x00000000c0000221, false},
+		{"64:ff9b::0:0:0:192.0.2.33", 0x0064ff9b00000000, 0x00000000c0000221, false},
+		{"64:ff9b::0:0:0:0:192.0.2.33", 0x0064ff9b00000000, 0x00000000c0000221, false},
+		{"64:ff9b:0:0:0:0:192.0.2.33", 0x0064ff9b00000000, 0x00000000c0000221, false},
+		{"64:ff9b::192.0.2", 0, 0, true},
+		{"64:ff9b::192.0.2.33.0", 0, 0, true},
+		{"64:ff9b::192.0.256.33", 0, 0, true},
+		{"64:ff9b:0:0:0:0:0:192.0.2.33", 0, 0, true},
+		{"64:ff9b::0:0:0:0:0:192.0.2.33", 0, 0, true},
 	}
 
 	for _, c := range cases {
@@ -76,6 +86,28 @@ func Test_IPv6_Cmp(t *testing.T) {
 
 		if res, _ := ip1.Cmp(ip2); res != c.res {
 			t.Errorf("%s.Cmp(%s) Expect: %d  Result: %d", ip1, ip2, c.res, res)
+		}
+	}
+}
+
+func Test_IPv6_IPv4(t *testing.T){
+	cases := []struct {
+		ipv6 string
+		ipv4 string
+		pl int
+	}{
+		{"64:ff9b::192.0.2.33", "192.0.2.33", 0},
+		{"2001:db8:c000:221::", "192.0.2.33", 32},
+		{"2001:db8:1c0:2:21::", "192.0.2.33", 40},
+		{"2001:db8:122:c000:2:2100::", "192.0.2.33", 48},
+		{"2001:db8:122:3c0:0:221::", "192.0.2.33", 56},
+		{"2001:db8:122:344:c0:2:2100::", "192.0.2.33", 64},
+	}
+	
+	for _, c := range cases {
+		ipv6, _ := ParseIPv6(c.ipv6)
+		if res := ipv6.IPv4(c.pl); res.String() != c.ipv4 {
+			t.Errorf("%s.IPv4(%d) Expect: %s  Result: %s", c.ipv6, c.pl, c.ipv4, res.String())
 		}
 	}
 }
