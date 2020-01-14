@@ -232,8 +232,9 @@ func (ip *IPv6) String() string {
 		u64 = ip.hostId
 	}
 
-	// compress if we've found a series of 0 words in a row
-	if finalStart != -1 {
+	// compress if we've found a series of zero fields in a row.
+	// per https://tools.ietf.org/html/rfc5952#section-4.2.2 we must not compress just a single 16-bit zero field.
+	if finalEnd-finalStart > 1 {
 		head := strings.Join(hexStr[:finalStart], ":")
 		tail := strings.Join(hexStr[finalEnd:], ":")
 		return head + "::" + tail
