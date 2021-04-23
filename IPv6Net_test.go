@@ -58,8 +58,8 @@ func Test_IPv6Net_Cmp(t *testing.T) {
 
 func Test_IPv6Net_Contains(t *testing.T) {
 	cases := []struct {
-		net    string
-		ip     string
+		net      string
+		ip       string
 		contains bool
 	}{
 		{"1:8::/29", "1:f::", true},
@@ -68,10 +68,10 @@ func Test_IPv6Net_Contains(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		net,_ := ParseIPv6Net(c.net)
-		ip,_ := ParseIPv6(c.ip)
+		net, _ := ParseIPv6Net(c.net)
+		ip, _ := ParseIPv6(c.ip)
 		if c.contains != net.Contains(ip) {
-			t.Errorf("%s.Contains(%s) Expect: %v  Result: %v", c.net,c.ip,c.contains,!c.contains)
+			t.Errorf("%s.Contains(%s) Expect: %v  Result: %v", c.net, c.ip, c.contains, !c.contains)
 		}
 	}
 }
@@ -91,6 +91,11 @@ func Test_IPv6Net_Fill(t *testing.T) {
 			"ff00::/121",
 			[]string{"ff00::/126", "ff00::/120"},
 			[]string{"ff00::/126", "ff00::4/126", "ff00::8/125", "ff00::10/124", "ff00::20/123", "ff00::40/122"},
+		},
+		{
+			"ff00::/8",
+			[]string{"ff00::/8"},
+			[]string{},
 		},
 	}
 
@@ -229,7 +234,7 @@ func Test_IPv6Net_NthSubnet(t *testing.T) {
 
 	for _, c := range cases {
 		net, _ := ParseIPv6Net(c.given)
-		nth := net.NthSubnet(c.prefix,c.nth)
+		nth := net.NthSubnet(c.prefix, c.nth)
 		if nth == nil {
 			if c.expect != "" {
 				t.Errorf("%s.NthSubnet(%d,%d) Expect: %s  Result: nil", c.given, c.prefix, c.nth, c.expect)

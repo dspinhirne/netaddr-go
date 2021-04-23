@@ -102,8 +102,7 @@ func (net *IPv6Net) Fill(list IPv6NetList) IPv6NetList {
 				subs = append(subs, e)
 			}
 		}
-		// discard subnets of subnets & sort
-		subs = subs.discardSubnets().Sort()
+
 	} else {
 		return subs
 	}
@@ -111,6 +110,9 @@ func (net *IPv6Net) Fill(list IPv6NetList) IPv6NetList {
 	// fill
 	var filled IPv6NetList
 	if len(subs) > 0 {
+		// discard subnets of subnets & sort
+		subs = subs.discardSubnets().Sort()
+
 		// bottom fill if base address is missing
 		cmp, _ := net.base.Cmp(subs[0].base)
 		if cmp != 0 {

@@ -116,8 +116,6 @@ func (net *IPv4Net) Fill(list IPv4NetList) IPv4NetList {
 				subs = append(subs, e)
 			}
 		}
-		// discard subnets of subnets & sort
-		subs = subs.discardSubnets().Sort()
 	} else {
 		return subs
 	}
@@ -125,6 +123,9 @@ func (net *IPv4Net) Fill(list IPv4NetList) IPv4NetList {
 	// fill
 	var filled IPv4NetList
 	if len(subs) > 0 {
+		// discard subnets of subnets & sort
+		subs = subs.discardSubnets().Sort()
+
 		// bottom fill if base address is missing
 		base := net.base.addr
 		if subs[0].base.addr != base {
@@ -241,7 +242,7 @@ func (net *IPv4Net) Rel(other *IPv4Net) (bool, int) {
 		return false, 0
 	}
 
-	// when networks are equal then we can look exlusively at the netmask
+	// when networks are equal then we can look exclusively at the netmask
 	if net.base.addr == other.base.addr {
 		return true, net.m32.Cmp(other.m32)
 	}
