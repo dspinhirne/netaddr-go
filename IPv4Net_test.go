@@ -1,7 +1,9 @@
 package netaddr
 
-import "testing"
-import "fmt"
+import (
+	"fmt"
+	"testing"
+)
 
 func ExampleParseIPv4Net() {
 	net, _ := ParseIPv4Net("10.0.0.0/24")
@@ -24,11 +26,11 @@ func ExampleIPv4Net_Extended() {
 }
 
 func ExampleIPv4Net_Fill() {
-	net, _ := ParseIPv4Net("10.0.0.0/24")
-	subs,_ := NewIPv4NetList([]string{"10.0.0.0/26"})
-	subs = net.Fill(subs)           // fills in the missing subnets
+	net, _ := ParseIPv4Net("10.0.0.0/23")
+	subs, _ := NewIPv4NetList([]string{"10.0.0.64/27", "10.0.0.248/29", "10.0.1.4/30"})
+	subs = net.Fill(subs) // fills in the missing subnets
 	fmt.Println(subs)
-	// Output: [10.0.0.0/26 10.0.0.64/26 10.0.0.128/25]
+	// Output: [10.0.0.0/26 10.0.0.64/27 10.0.0.96/27 10.0.0.128/26 10.0.0.192/27 10.0.0.224/28 10.0.0.240/29 10.0.0.248/29 10.0.1.0/30 10.0.1.4/30 10.0.1.8/29 10.0.1.16/28 10.0.1.32/27 10.0.1.64/26 10.0.1.128/25]
 }
 
 func ExampleIPv4Net_Next() {
@@ -55,7 +57,7 @@ func ExampleIPv4Net_Nth() {
 
 func ExampleIPv4Net_NthSubnet() {
 	net, _ := ParseIPv4Net("10.0.0.0/24")
-	fmt.Println(net.NthSubnet(30,2)) // the 3rd /30 subnet
+	fmt.Println(net.NthSubnet(30, 2)) // the 3rd /30 subnet
 	// Output: 10.0.0.8/30
 }
 
@@ -188,8 +190,8 @@ func Test_IPv4Net_Cmp(t *testing.T) {
 
 func Test_IPv4Net_Contains(t *testing.T) {
 	cases := []struct {
-		net    string
-		ip     string
+		net      string
+		ip       string
 		contains bool
 	}{
 		{"1.0.0.8/29", "1.0.0.15", true},
@@ -198,10 +200,10 @@ func Test_IPv4Net_Contains(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		net,_ := ParseIPv4Net(c.net)
-		ip,_ := ParseIPv4(c.ip)
+		net, _ := ParseIPv4Net(c.net)
+		ip, _ := ParseIPv4(c.ip)
 		if c.contains != net.Contains(ip) {
-			t.Errorf("%s.Contains(%s) Expect: %v  Result: %v", c.net,c.ip,c.contains,!c.contains)
+			t.Errorf("%s.Contains(%s) Expect: %v  Result: %v", c.net, c.ip, c.contains, !c.contains)
 		}
 	}
 }
@@ -216,6 +218,16 @@ func Test_IPv4Net_Fill(t *testing.T) {
 			"10.0.0.0/24",
 			[]string{"10.0.0.0/24", "10.0.0.0/8", "10.0.0.8/30", "10.0.0.16/30", "10.0.0.16/29", "10.0.0.24/29"},
 			[]string{"10.0.0.0/29", "10.0.0.8/30", "10.0.0.12/30", "10.0.0.16/29", "10.0.0.24/29", "10.0.0.32/27", "10.0.0.64/26", "10.0.0.128/25"},
+		},
+		{
+			"10.0.0.0/23",
+			[]string{"10.0.0.64/27", "10.0.0.248/29"},
+			[]string{"10.0.0.0/26", "10.0.0.64/27", "10.0.0.96/27", "10.0.0.128/26", "10.0.0.192/27", "10.0.0.224/28", "10.0.0.240/29", "10.0.0.248/29", "10.0.1.0/24"},
+		},
+		{
+			"10.0.0.0/23",
+			[]string{"10.0.0.248/29", "10.0.1.4/30"},
+			[]string{"10.0.0.0/25", "10.0.0.128/26", "10.0.0.192/27", "10.0.0.224/28", "10.0.0.240/29", "10.0.0.248/29", "10.0.1.0/30", "10.0.1.4/30", "10.0.1.8/29", "10.0.1.16/28", "10.0.1.32/27", "10.0.1.64/26", "10.0.1.128/25"},
 		},
 		{
 			"128.0.0.0/1",
@@ -363,7 +375,7 @@ func Test_IPv4Net_NthSubnet(t *testing.T) {
 
 	for _, c := range cases {
 		net, _ := ParseIPv4Net(c.given)
-		nth := net.NthSubnet(c.prefix,c.nth)
+		nth := net.NthSubnet(c.prefix, c.nth)
 		if nth == nil {
 			if c.expect != "" {
 				t.Errorf("%s.NthSubnet(%d,%d) Expect: %s  Result: nil", c.given, c.prefix, c.nth, c.expect)
