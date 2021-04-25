@@ -133,27 +133,24 @@ func (net *IPv4Net) Fill(list IPv4NetList) IPv4NetList {
 
 		// fill gaps between subnets
 		sib := net.nthNextSib(1)
-		var ceil uint32
+		var ceil *IPv4Net
 		if sib != nil {
-			ceil = sib.base.addr
+			ceil = sib
 		} else {
-			ceil = F32
+			ceil = NewIPv4(F32).ToNet()
 		}
 		for i := 0; i < len(subs); i += 1 {
 			sub := subs[i]
 			filled = append(filled, sub)
 			// we need to define a limit for this round
-			var limit uint32
-			// we need to define the limit's IPV4Net
-			var limitNet *IPv4Net
+			var limit *IPv4Net
+	
 			if i+1 < len(subs) {
-				limit = subs[i+1].base.addr
-				limitNet = subs[i+1]
+				limit = subs[i+1]
 			} else {
 				limit = ceil
-				limitNet = sib
 			}
-			filled = append(filled, sub.fwdFill(limit, limitNet)...)
+			filled = append(filled, sub.fwdFill(limit)...)
 		}
 	}
 	return filled
@@ -328,7 +325,7 @@ func (net *IPv4Net) backfill(limit uint32) IPv4NetList {
 // fwdFill returns subnets between this net and the limit address.
 // limit should be > net. will create subnets up to limit.
 // limitNet should be the IPv4Net related to the limit, which is used to backfill nets
-func (net *IPv4Net) fwdFill(limit uint32, limitNet *IPv4Net) IPv4NetList {
+func (net *IPv4Net) fwdFill(limit *IPv4Net) IPv4NetList {
 	var nets IPv4NetList
 	cur := net
 	for {
@@ -339,14 +336,15 @@ func (net *IPv4Net) fwdFill(limit uint32, limitNet *IPv4Net) IPv4NetList {
 		}
 		// need to determine if next's broadcast is over or equal to limit
 		nextBroadcast := next.Nth(next.Len() - 1).addr
+
 		// next extends past the limit, and we need to backfill the limitNet
-		if nextBroadcast+1 > limit {
-			nextNets := limitNet.backfill(next.base.addr)
+		if nextBroadcast+1 > limit.base.addr {
+			nextNets := limit.backfill(next.base.addr)
 			nets = append(nets, nextNets...)
 			break
 		}
 		// next reaches to the limit and fills up nets
-		if nextBroadcast+1 == limit {
+		if nextBroadcast+1 == limit.base.addr {
 			nets = append(nets, next)
 			break
 		}
