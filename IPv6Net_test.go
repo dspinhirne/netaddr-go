@@ -83,17 +83,17 @@ func Test_IPv6Net_Fill(t *testing.T) {
 		filled []string
 	}{
 		{
-			"ff00::/8",
+			"ff00::/8", // Test ranges that extend to end of address space
 			[]string{"ff08::/14", "fe00::/7", "ff20::/11", "ff20::/12"},
 			[]string{"ff00::/13", "ff08::/14", "ff0c::/14", "ff10::/12", "ff20::/11", "ff40::/10", "ff80::/9"},
 		},
 		{
-			"ff00::/121",
+			"ff00::/121",  // Test standard offset
 			[]string{"ff00::/126", "ff00::/120"},
 			[]string{"ff00::/126", "ff00::4/126", "ff00::8/125", "ff00::10/124", "ff00::20/123", "ff00::40/122"},
 		},
 		{
-			"ff00::/120",
+			"ff00::/120",  // Test late offset
 			[]string{"ff00::4/126", "ff00::30/124"},
 			[]string{"ff00::/126", "ff00::4/126", "ff00::8/125", "ff00::10/124", "ff00::20/124", "ff00::30/124", "ff00::40/122", "ff00::80/121"},
 		},
