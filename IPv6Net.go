@@ -351,6 +351,7 @@ func (net *IPv6Net) fwdFill(limit *IPv6Net) IPv6NetList {
 	cur := net
 	for {
 		next := cur.NextSib()
+		// next exceeded address space
 		if next == nil {
 			break
 		}
@@ -380,6 +381,7 @@ func (net *IPv6Net) fwdFill(limit *IPv6Net) IPv6NetList {
 		nets = append(nets, next)
 		cur = next
 	}
+	// clean up contiguous siblings in nets
 	return nets.Summ()
 }
 
