@@ -126,26 +126,27 @@ func (net *IPv4Net) Fill(list IPv4NetList) IPv4NetList {
 	var filled IPv4NetList
 	if len(subs) > 0 {
 		// bottom fill if base address is missing
-		base := net.base.addr
-		if subs[0].base.addr != base {
-			filled = subs[0].backfill(base)
+		cmp, _ := net.base.Cmp(subs[0].base)
+		if cmp != 0 {
+			filled = subs[0].backfill(net.base)
 		}
 
 		// fill gaps between subnets
 		sib := net.nthNextSib(1)
-		var ceil uint32
+		var ceil *IPv4Net
 		if sib != nil {
-			ceil = sib.base.addr
+			ceil = sib
 		} else {
-			ceil = F32
+			ceil = NewIPv4(F32).ToNet()
 		}
 		for i := 0; i < len(subs); i += 1 {
 			sub := subs[i]
 			filled = append(filled, sub)
 			// we need to define a limit for this round
-			var limit uint32
+			var limit *IPv4Net
+	
 			if i+1 < len(subs) {
-				limit = subs[i+1].base.addr
+				limit = subs[i+1]
 			} else {
 				limit = ceil
 			}
@@ -307,12 +308,16 @@ func (ip *IPv4Net) Version() uint{return 4}
 
 // backfill generates subnets between this net and the limit address.
 // limit should be < net. will create subnets up to and including limit.
-func (net *IPv4Net) backfill(limit uint32) IPv4NetList {
+func (net *IPv4Net) backfill(limit *IPv4) IPv4NetList {
 	var nets IPv4NetList
 	cur := net
 	for {
 		prev := cur.Prev()
-		if prev == nil || prev.base.addr < limit {
+		if prev == nil {
+			break
+		}
+		cmp, _ := prev.base.Cmp(limit)
+		if cmp == -1 {
 			break
 		}
 		nets = append(IPv4NetList{prev}, nets...)
@@ -323,18 +328,43 @@ func (net *IPv4Net) backfill(limit uint32) IPv4NetList {
 
 // fwdFill returns subnets between this net and the limit address.
 // limit should be > net. will create subnets up to limit.
-func (net *IPv4Net) fwdFill(limit uint32) IPv4NetList {
+func (net *IPv4Net) fwdFill(limit *IPv4Net) IPv4NetList {
 	var nets IPv4NetList
 	cur := net
 	for {
-		next := cur.Next()
-		if next == nil || next.base.addr >= limit {
+		next := cur.NextSib()
+		// next exceeded address space
+		if next == nil {
 			break
 		}
+		// afterNext determines if next equals or extends past limit
+		afterNext := next.NextSib()
+
+		// afterNext exceeded address space
+		if afterNext == nil {
+			nets = append(nets, next)
+			break
+		}
+		// test afterNext against limit to see if greater or equal
+		cmp, _ := afterNext.Cmp(limit)
+
+		// afterNext extends past the limit, and we need to backfill the limit
+		if cmp == 1 {			
+			nextNets := limit.backfill(next.base)
+			nets = append(nets, nextNets...)
+			break
+		}
+		// afterNext equals the limit, we can add next and break
+		if cmp == 0 {
+			nets = append(nets, next)
+			break
+		}
+		// we have not reached limit yet
 		nets = append(nets, next)
 		cur = next
 	}
-	return nets
+	// clean up contiguous siblings in nets
+	return nets.Summ()
 }
 
 // initIPv4Net initializes a new IPv4Net
