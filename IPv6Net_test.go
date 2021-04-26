@@ -93,7 +93,7 @@ func Test_IPv6Net_Fill(t *testing.T) {
 			[]string{"ff00::/126", "ff00::4/126", "ff00::8/125", "ff00::10/124", "ff00::20/123", "ff00::40/122"},
 		},
 		{
-			"ff00::/8",
+			"ff00::/8", // Test clean-up with empty return
 			[]string{"ff00::/8"},
 			[]string{},
 		},

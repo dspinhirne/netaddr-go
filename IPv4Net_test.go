@@ -33,14 +33,6 @@ func ExampleIPv4Net_Fill() {
 	// Output: [10.0.0.0/26 10.0.0.64/26 10.0.0.128/25]
 }
 
-func ExampleIPv4Net_Fill_Same_Net() {
-	net, _ := ParseIPv4Net("10.0.0.0/24")
-	subs, _ := NewIPv4NetList([]string{"10.0.0.0/24"})
-	subs = net.Fill(subs) // fills in the missing subnets
-	fmt.Println(subs)
-	// Output: []
-}
-
 func ExampleIPv4Net_Next() {
 	net, _ := ParseIPv4Net("10.0.0.4/30")
 	next := net.Next()
@@ -236,6 +228,11 @@ func Test_IPv4Net_Fill(t *testing.T) {
 			"1.0.0.0/25",
 			[]string{"1.0.0.0/30", "1.0.0.64/26"},
 			[]string{"1.0.0.0/30", "1.0.0.4/30", "1.0.0.8/29", "1.0.0.16/28", "1.0.0.32/27", "1.0.0.64/26"},
+		},
+		{
+			"10.0.0.0/24",  // Test clean-up with empty return
+			[]string{"10.0.0.0/24"},
+			[]string{},
 		},
 	}
 
