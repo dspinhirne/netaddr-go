@@ -119,19 +119,19 @@ func (net *IPv6Net) Fill(list IPv6NetList) IPv6NetList {
 
 		// fill gaps between subnets
 		sib := net.nthNextSib(1)
-		var ceil *IPv6
+		var ceil *IPv6Net
 		if sib != nil {
-			ceil = sib.base
+			ceil = sib
 		} else {
-			ceil = NewIPv6(F64, F64)
+			ceil = NewIPv6(F64, F64).ToNet()
 		}
 		for i := 0; i < len(subs); i += 1 {
 			sub := subs[i]
 			filled = append(filled, sub)
 			// we need to define a limit for this round
-			var limit *IPv6
+			var limit *IPv6Net
 			if i+1 < len(subs) {
-				limit = subs[i+1].base
+				limit = subs[i+1]
 			} else {
 				limit = ceil
 			}
@@ -346,22 +346,41 @@ func (net *IPv6Net) backfill(limit *IPv6) IPv6NetList {
 
 // fwdFill returns subnets between this net and the limit address.
 // limit should be > net. will create subnets up to limit.
-func (net *IPv6Net) fwdFill(limit *IPv6) IPv6NetList {
+func (net *IPv6Net) fwdFill(limit *IPv6Net) IPv6NetList {
 	var nets IPv6NetList
 	cur := net
 	for {
-		next := cur.Next()
+		next := cur.NextSib()
 		if next == nil {
 			break
 		}
-		cmp, _ := next.base.Cmp(limit)
-		if cmp >= 0 {
+		// afterNext determines if next equals or extends past limit
+		afterNext := next.NextSib()
+
+		// afterNext exceeded address space
+		if afterNext == nil {
+			nets = append(nets, next)
 			break
 		}
+		// test afterNext against limit to see if greater or equal
+		cmp, _ := afterNext.Cmp(limit)
+
+		// afterNext extends past the limit, and we need to backfill the limit
+		if cmp == 1 {			
+			nextNets := limit.backfill(next.base)
+			nets = append(nets, nextNets...)
+			break
+		}
+		// afterNext equals the limit, we can add next and break
+		if cmp == 0 {
+			nets = append(nets, next)
+			break
+		}
+		// we have not reached limit yet
 		nets = append(nets, next)
 		cur = next
 	}
-	return nets
+	return nets.Summ()
 }
 
 // initIPv6Net initializes a new IPv6Net
