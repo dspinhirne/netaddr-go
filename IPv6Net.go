@@ -118,24 +118,13 @@ func (net *IPv6Net) Fill(list IPv6NetList) IPv6NetList {
 		}
 
 		// fill gaps between subnets
-		sib := net.nthNextSib(1)
-		var ceil *IPv6
-		if sib != nil {
-			ceil = sib.base
-		} else {
-			ceil = NewIPv6(F64, F64)
-		}
 		for i := 0; i < len(subs); i += 1 {
 			sub := subs[i]
-			filled = append(filled, sub)
-			// we need to define a limit for this round
-			var limit *IPv6
 			if i+1 < len(subs) {
-				limit = subs[i+1].base
-			} else {
-				limit = ceil
+				filled = append(filled, sub.fwdFill(net,subs[i+1])...)
+			} else{
+				filled = append(filled, sub.fwdFill(net,nil)...)
 			}
-			filled = append(filled, sub.fwdFill(limit)...)
 		}
 	}
 	return filled
@@ -344,22 +333,67 @@ func (net *IPv6Net) backfill(limit *IPv6) IPv6NetList {
 	return nets
 }
 
-// fwdFill returns subnets between this net and the limit address.
+// fwdFill returns subnets between this net and the limit net.
 // limit should be > net. will create subnets up to limit.
-func (net *IPv6Net) fwdFill(limit *IPv6) IPv6NetList {
-	var nets IPv6NetList
+func (net *IPv6Net) fwdFill(supernet, limit *IPv6Net) IPv6NetList {
+	nets := IPv6NetList{net}
 	cur := net
-	for {
-		next := cur.Next()
-		if next == nil {
-			break
+	if limit != nil{ // if limit, then fill gaps between net and limit
+		for {
+			next := cur.nthNextSib(1)
+			// ensure we've not exceed the total address space
+			if next == nil{break}
+			// ensure we've not exceeded the address space of supernet
+			if isRel, _ := supernet.Rel(next); !isRel{break}
+			// ensure we've not hit limit
+			if cmp, _ := next.base.Cmp(limit.base); cmp >= 0{break}
+			
+			// check relationship to limit
+			isRel, _ := next.Rel(limit)
+			if isRel{ // if isRel, then next must be a supernet of limit. we need to shrink it.
+				prefixLen := next.m128.prefixLen
+				for{
+					prefixLen += 1
+					next = &IPv6Net{NewIPv6(next.base.netId, next.base.hostId), initMask128(prefixLen)}
+					if isRel, _ := next.Rel(limit); !isRel{break} // stop when we no longer overlap with limit
+				}
+			} else{ // otherwise, if unrelated then grow until we hit the limit
+			// START CUSTOMIZING HERE - need to adjust for hostIdMask vs netIdMask
+				prefixLen := next.m128.prefixLen
+				// mask := 
+				for{
+					prefixLen -= 1
+					var addr, mask uint64
+					if prefixLen > 64{
+						mask = next.m128.hostIdMask
+						addr = next.base.hostId
+					} else{
+						mask = next.m128.netIdMask
+						addr = next.base.netId
+					}
+					if prefixLen == supernet.m128.prefixLen {break}// break if we've hit the supernet boundary
+					mask = mask << 1
+					if addr|mask != mask || prefixLen == 0{break} // break when bit boundary crossed (there are '1' bits in the host portion)
+					grown := &IPv6Net{NewIPv6(next.base.netId, next.base.hostId), initMask128(prefixLen)}
+					if isRel, _ := grown.Rel(limit); isRel{break} // if we've overlapped with limit in any way, then break
+					next = grown
+				}
+			}
+			// END HERE
+			
+			nets = append(nets, next)
+			cur = next
+	}
+	} else{ // if no limit, then get next largest sibs until we've exceeded supernet
+		for {
+			next := cur.Next()
+			// ensure we've not exceed the total address space
+			if next == nil{break}
+			// ensure we've not exceeded the address space of supernet
+			if isRel, _ := supernet.Rel(next); !isRel{break}
+			nets = append(nets, next)
+			cur = next
 		}
-		cmp, _ := next.base.Cmp(limit)
-		if cmp >= 0 {
-			break
-		}
-		nets = append(nets, next)
-		cur = next
 	}
 	return nets
 }

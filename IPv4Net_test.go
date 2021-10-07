@@ -212,21 +212,26 @@ func Test_IPv4Net_Fill(t *testing.T) {
 		subs   []string
 		filled []string
 	}{
-		{
+		{ // filter supernet. remove subnets of subnets. basic fwd fill.
 			"10.0.0.0/24",
 			[]string{"10.0.0.0/24", "10.0.0.0/8", "10.0.0.8/30", "10.0.0.16/30", "10.0.0.16/29", "10.0.0.24/29"},
 			[]string{"10.0.0.0/29", "10.0.0.8/30", "10.0.0.12/30", "10.0.0.16/29", "10.0.0.24/29", "10.0.0.32/27", "10.0.0.64/26", "10.0.0.128/25"},
 		},
-		{
+		{ // basic backfill
 			"128.0.0.0/1",
 			[]string{"192.0.0.0/2"},
 			[]string{"128.0.0.0/2", "192.0.0.0/2"},
 		},
-		{
+		{ // basic fwd fill with non-contiguous subnets
 			"1.0.0.0/25",
 			[]string{"1.0.0.0/30", "1.0.0.64/26"},
 			[]string{"1.0.0.0/30", "1.0.0.4/30", "1.0.0.8/29", "1.0.0.16/28", "1.0.0.32/27", "1.0.0.64/26"},
 		},
+    { // basic backfill. complex fwd fill that uses 'shrink' of the proposed 1.0.16.0/21 subnet
+      "1.0.0.0/19",
+      []string{"1.0.8.0/21", "1.0.20.0/24"},
+      []string{"1.0.0.0/21","1.0.8.0/21","1.0.16.0/22","1.0.20.0/24","1.0.21.0/24","1.0.22.0/23","1.0.24.0/21"},
+    },
 	}
 
 	for _, c := range cases {
@@ -552,3 +557,4 @@ func Test_IPv4Net_Summ(t *testing.T) {
 		}
 	}
 }
+

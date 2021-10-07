@@ -82,15 +82,25 @@ func Test_IPv6Net_Fill(t *testing.T) {
 		subs   []string
 		filled []string
 	}{
-		{
+		{ // filter supernet. remove subnets of subnets. basic fwd fill.
 			"ff00::/8",
-			[]string{"ff08::/14", "fe00::/7", "ff20::/11", "ff20::/12"},
-			[]string{"ff00::/13", "ff08::/14", "ff0c::/14", "ff10::/12", "ff20::/11", "ff40::/10", "ff80::/9"},
+			[]string{"ff00::/8", "ff00::/9", "ff08::/14", "fe00::/7", "ff20::/11", "ff20::/12"},
+			[]string{"ff00::/9", "ff80::/9"},
 		},
-		{
+		{ // basic backfill
+			"8000::/1",
+			[]string{"c000::/2"},
+			[]string{"8000::/2","c000::/2"},
+		},
+		{ // basic fwd fill with non-contiguous subnets
 			"ff00::/121",
 			[]string{"ff00::/126", "ff00::/120"},
 			[]string{"ff00::/126", "ff00::4/126", "ff00::8/125", "ff00::10/124", "ff00::20/123", "ff00::40/122"},
+		},
+		{ // basic backfill. complex fwd fill that uses 'shrink' of the proposed f800::/6 subnet
+			"f000::/4",
+			[]string{"f400::/6", "fb00::/8"},
+			[]string{"f000::/6", "f400::/6", "f800::/7", "fa00::/8", "fb00::/8", "fc00::/6"},
 		},
 	}
 

@@ -132,24 +132,13 @@ func (net *IPv4Net) Fill(list IPv4NetList) IPv4NetList {
 		}
 
 		// fill gaps between subnets
-		sib := net.nthNextSib(1)
-		var ceil uint32
-		if sib != nil {
-			ceil = sib.base.addr
-		} else {
-			ceil = F32
-		}
 		for i := 0; i < len(subs); i += 1 {
 			sub := subs[i]
-			filled = append(filled, sub)
-			// we need to define a limit for this round
-			var limit uint32
 			if i+1 < len(subs) {
-				limit = subs[i+1].base.addr
-			} else {
-				limit = ceil
+				filled = append(filled, sub.fwdFill(net,subs[i+1])...)
+			} else{
+				filled = append(filled, sub.fwdFill(net,nil)...)
 			}
-			filled = append(filled, sub.fwdFill(limit)...)
 		}
 	}
 	return filled
@@ -321,18 +310,55 @@ func (net *IPv4Net) backfill(limit uint32) IPv4NetList {
 	return nets
 }
 
-// fwdFill returns subnets between this net and the limit address.
-// limit should be > net. will create subnets up to limit.
-func (net *IPv4Net) fwdFill(limit uint32) IPv4NetList {
-	var nets IPv4NetList
+// fwdFill returns subnets between this net and the limit net. limit should be > net.
+func (net *IPv4Net) fwdFill(supernet, limit *IPv4Net) IPv4NetList {
+	nets := IPv4NetList{net}
 	cur := net
-	for {
-		next := cur.Next()
-		if next == nil || next.base.addr >= limit {
-			break
+	if limit != nil{ // if limit, then fill gaps between net and limit
+		for {
+			next := cur.nthNextSib(1)
+			// ensure we've not exceed the total address space
+			if next == nil{break}
+			// ensure we've not exceeded the address space of supernet
+			if isRel, _ := supernet.Rel(next); !isRel{break}
+			// ensure we've not hit limit
+			if next.base.addr == limit.base.addr{break}
+			
+			// check relationship to limit
+			isRel, _ := next.Rel(limit)
+			if isRel{ // if isRel, then next must be a supernet of limit. we need to shrink it.
+				prefixLen := next.m32.prefixLen
+				for{
+					prefixLen += 1
+					next = &IPv4Net{NewIPv4(next.base.addr), initMask32(prefixLen)}
+					if isRel, _ := next.Rel(limit); !isRel{break} // stop when we no longer overlap with limit
+				}
+			} else{ // otherwise, if unrelated then grow until we hit the limit
+				prefixLen := next.m32.prefixLen
+				mask := next.m32.mask
+				for{
+					prefixLen -= 1
+					if prefixLen == supernet.m32.prefixLen {break}// break if we've hit the supernet boundary
+					mask = mask << 1
+					if next.base.addr|mask != mask{break} // break when bit boundary crossed (there are '1' bits in the host portion)
+					grown := &IPv4Net{NewIPv4(next.base.addr), initMask32(prefixLen)}
+					if isRel, _ := grown.Rel(limit); isRel{break} // if we've overlapped with limit in any way, then break
+					next = grown
+				}
+			}
+			nets = append(nets, next)
+			cur = next
 		}
-		nets = append(nets, next)
-		cur = next
+	} else{ // if no limit, then get next largest sibs until we've exceeded supernet
+		for {
+			next := cur.Next()
+			// ensure we've not exceed the total address space
+			if next == nil{break}
+			// ensure we've not exceeded the address space of supernet
+			if isRel, _ := supernet.Rel(next); !isRel{break}
+			nets = append(nets, next)
+			cur = next
+		}
 	}
 	return nets
 }
