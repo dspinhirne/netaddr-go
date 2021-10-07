@@ -117,7 +117,7 @@ func (net *IPv4Net) Fill(list IPv4NetList) IPv4NetList {
 			}
 		}
 		// discard subnets of subnets & sort
-		subs = subs.discardSubnets().Sort()
+		if len(list)>0 {subs = subs.discardSubnets().Sort()}
 	} else {
 		return subs
 	}

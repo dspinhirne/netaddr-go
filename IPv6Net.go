@@ -103,7 +103,7 @@ func (net *IPv6Net) Fill(list IPv6NetList) IPv6NetList {
 			}
 		}
 		// discard subnets of subnets & sort
-		subs = subs.discardSubnets().Sort()
+		if len(list)>0 {subs = subs.discardSubnets().Sort()}
 	} else {
 		return subs
 	}
@@ -358,7 +358,6 @@ func (net *IPv6Net) fwdFill(supernet, limit *IPv6Net) IPv6NetList {
 					if isRel, _ := next.Rel(limit); !isRel{break} // stop when we no longer overlap with limit
 				}
 			} else{ // otherwise, if unrelated then grow until we hit the limit
-			// START CUSTOMIZING HERE - need to adjust for hostIdMask vs netIdMask
 				prefixLen := next.m128.prefixLen
 				// mask := 
 				for{
@@ -379,8 +378,6 @@ func (net *IPv6Net) fwdFill(supernet, limit *IPv6Net) IPv6NetList {
 					next = grown
 				}
 			}
-			// END HERE
-			
 			nets = append(nets, next)
 			cur = next
 	}

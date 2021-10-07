@@ -97,11 +97,17 @@ func Test_IPv6Net_Fill(t *testing.T) {
 			[]string{"ff00::/126", "ff00::/120"},
 			[]string{"ff00::/126", "ff00::4/126", "ff00::8/125", "ff00::10/124", "ff00::20/123", "ff00::40/122"},
 		},
-		{ // basic backfill. complex fwd fill that uses 'shrink' of the proposed f800::/6 subnet
-			"f000::/4",
-			[]string{"f400::/6", "fb00::/8"},
-			[]string{"f000::/6", "f400::/6", "f800::/7", "fa00::/8", "fb00::/8", "fc00::/6"},
+		{ // basic backfill. complex fwd fill that uses 'shrink' of the proposed ffff:ffff:ffff:fff8::/62 subnet. designed to cross the /64 bit boundary.
+			"ffff:ffff:ffff:fff0::/60",
+			[]string{"ffff:ffff:ffff:fff4::/62", "ffff:ffff:ffff:fffb::/65"},
+			[]string{"ffff:ffff:ffff:fff0::/62", "ffff:ffff:ffff:fff4::/62", "ffff:ffff:ffff:fff8::/63", "ffff:ffff:ffff:fffa::/64", "ffff:ffff:ffff:fffb::/65",
+			"ffff:ffff:ffff:fffb:8000::/65", "ffff:ffff:ffff:fffc::/62"},
 		},
+		{ // list contains the supernet
+      "ffff::/16",
+      []string{"ffff::/16"},
+      []string{},
+    },
 	}
 
 	for _, c := range cases {
