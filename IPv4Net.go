@@ -65,9 +65,9 @@ func NewIPv4Net(ip *IPv4, m32 *Mask32) (*IPv4Net, error) {
 
 /*
 Cmp compares equality with another IPv4Net. Return:
-	* 1 if this IPv4Net is numerically greater
+	* 1 if this IPv4Net is numerically greater than other
 	* 0 if the two are equal
-	* -1 if this IPv4Net is numerically less
+	* -1 if this IPv4Net is numerically less than other
 
 The comparasin is initially performed on using the Cmp() method of the network address,
 however, in cases where the network addresses are identical then the netmasks will

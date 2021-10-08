@@ -37,9 +37,9 @@ func (ip *IPv4) Addr() uint32 {
 
 /*
 Cmp compares equality with another IPv4. Return:
-	* 1 if this IPv4 is numerically greater
+	* 1 if this IPv4 is numerically greater than other
 	* 0 if the two are equal
-	* -1 if this IPv4 is numerically less
+	* -1 if this IPv4 is numerically less than other
 */
 func (ip *IPv4) Cmp(other *IPv4) (int, error) {
 	if other == nil {

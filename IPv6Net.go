@@ -56,9 +56,9 @@ func NewIPv6Net(ip *IPv6, m128 *Mask128) (*IPv6Net, error) {
 
 /*
 Cmp compares equality with another IPv6Net. Return:
-	* 1 if this IPv6Net is numerically greater
+	* 1 if this IPv6Net is numerically greater than other
 	* 0 if the two are equal
-	* -1 if this IPv6Net is numerically less
+	* -1 if this IPv6Net is numerically less than other
 
 The comparasin is initially performed on using the Cmp() method of the network address,
 however, in cases where the network addresses are identical then the netmasks will

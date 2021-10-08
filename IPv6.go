@@ -99,9 +99,9 @@ func NewIPv6(netId, hostId uint64) *IPv6 {
 
 /*
 Cmp compares equality with another IPv6. Return:
-	* 1 if this IPv6 is numerically greater
+	* 1 if this IPv6 is numerically greater than other
 	* 0 if the two are equal
-	* -1 if this IPv6 is numerically less
+	* -1 if this IPv6 is numerically less than other
 */
 func (ip *IPv6) Cmp(other *IPv6) (int, error) {
 	if other == nil {

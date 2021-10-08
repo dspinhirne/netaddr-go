@@ -15,6 +15,14 @@ func ExampleNewIPv4() {
 	// Output: 128.0.0.1
 }
 
+func ExampleIPv4Cmp() {
+	// how does 10.0.0.0 compare with 10.0.0.1?
+	ip0, _ := ParseIPv4("10.0.0.0")
+	ip1, _ := ParseIPv4("10.0.0.1")
+	fmt.Println(ip0.Cmp(ip1))
+	// Output: -1 <nil>
+}
+
 func Test_ParseIPv4(t *testing.T) {
 	cases := []struct {
 		given string
