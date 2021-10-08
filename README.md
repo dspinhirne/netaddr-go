@@ -23,3 +23,7 @@ It should be noted that while the repository name is "netaddr-go" the package na
 
 # Documentation
 Available online [here](https://godoc.org/github.com/dspinhirne/netaddr-go).
+
+
+# Versioning
+Follows the standard documented [here](https://golang.org/doc/modules/version-numbers)
