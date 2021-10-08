@@ -26,4 +26,6 @@ Available online [here](https://godoc.org/github.com/dspinhirne/netaddr-go).
 
 
 # Versioning
-Follows the standard documented [here](https://golang.org/doc/modules/version-numbers)
+Versioning follows the standard documented [here](https://golang.org/doc/modules/version-numbers).
+
+Why is there no 1.x.x? -  I have chosen to match the versioning scheme of the original Ruby library. Following this, the API of this code is similar to that of the Ruby code.
