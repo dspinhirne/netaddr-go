@@ -15,7 +15,7 @@ func ExampleNewIPv4() {
 	// Output: 128.0.0.1
 }
 
-func ExampleIPv4Cmp() {
+func ExampleCmpIPv4() {
 	// how does 10.0.0.0 compare with 10.0.0.1?
 	ip0, _ := ParseIPv4("10.0.0.0")
 	ip1, _ := ParseIPv4("10.0.0.1")
